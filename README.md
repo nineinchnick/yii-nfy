@@ -43,7 +43,7 @@ Import module classes from:
 
 Apply migrations:
 
-~~~
+~~~bash
 ./yiic migrate --migrationPath=nfy.migrations
 ~~~
 
@@ -101,7 +101,18 @@ $test->save();
 // now the table nfy_queues contains a logged message
 ~~~
 
+### Display notifications
+
+Put anywhere in your layout or views or controller.
+
+~~~
+[php]
+$this->widget('nfy.extensions.webNotifications.WebNotifications', array('url'=>$this->createUrl('/nfy/default/poll')));
+~~~
+
 ### Push notifications
+
+Missing.
 
 ## Todo
 
