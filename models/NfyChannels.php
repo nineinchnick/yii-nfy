@@ -100,52 +100,27 @@ class NfyChannels extends CActiveRecord
 	}
 
 	/**
-	 * @param mixed $msg if string, is treated as message to be logged, if an array, should contain 'old' and 'new' keys with CModel objects as values
-	 * @param string $level level of the message (e.g. 'trace', 'warning', 'error'). It is case-insensitive.
-	 * @param string $category category of the message (e.g. 'system.web'). It is case-insensitive.
+	 * Subscribes user to this channel.
+	 * @param integer $user_id
+	 * @return boolean
 	 */
-	public function process($msg, $level, $category) {
-		// create message using templates
-		if (is_array($msg)) {
-			// create tokens from old and new models' attributes
-			$tokens = array();
-			$values = array();
-			foreach($msg['old']->getAttributes() as $attribute=>$value) {
-				$tokens[] = "{old.$attribute}";
-				$values[] = $value;
-			}
-			foreach($msg['new']->getAttributes() as $attribute=>$value) {
-				$tokens[] = "{new.$attribute}";
-				$values[] = $value;
-			}
-			if ($this->message_template === null) {
-				$msg = serialize(array_combine($tokens, $values));
-			} else {
-				$msg = str_replace($tokens, $values, $this->message_template);
-			}
+	public function subscribe($user_id) {
+		$subscription = new NfySubscriptions;
+		$subscription->channel_id = $this->id;
+		$subscription->user_id = $user_id;
+		return $subscription->save();
+	}
+
+	/**
+	 * Unsubscribes user from this channel.
+	 * @param integer $user_id
+	 * @return boolean
+	 */
+	public function unsubscribe($user_id) {
+		$subscriptions = NfySubscriptions::model()->findAllByAttributes(array('channel_id'=>$this->id,'user_id'=>$user_id));
+		foreach($subscriptions as $subscription) {
+			$subscription->delete();
 		}
-		// save message
-		$message = new NfyMessages;
-		$message->channel_id = $this->id;
-		$message->logtime = date('Y-m-d H:i:s');
-		$message->message = $msg;
-		if (!$message->save()) {
-			Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' for channel {channel_id}.", array('{msg}' => $msg, '{channel_id}' => $this->id)), 'error', 'nfy');
-		}
-		// load subscriptions for matching channels
-		foreach($this->subscriptions as $subscription) {
-			// send push notifications via selected transports
-			foreach(explode(',',$subscription->push_transports) as $transport) {
-				$transport = trim($transport, " \t\n\r\0,");
-				//! @todo implement
-			}
-			// add message to subscription's queue
-			$queue = new NfyQueues;
-			$queue->subscription_id = $subscription->id;
-			$queue->message_id = $message->id;
-			if (!$queue->save()) {
-				Yii::log(Yii::t('NfyModule.app', 'Failed to send notification {message_id} to user {user_id} via subscription {subscription_id}.', array('{message_id}' => $message->id, '{user_id}' => $subscription->user_id, '{subscription_id}' => $subscription->id)), 'error', 'nfy');
-			}
-		}
+		return true;
 	}
 }

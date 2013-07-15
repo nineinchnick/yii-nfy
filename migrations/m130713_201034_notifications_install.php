@@ -4,11 +4,11 @@ class m130713_201034_notifications_install extends CDbMigration
 {
 	public function safeUp()
 	{
-		//! @todo read from module config
-		//! @todo specify as a model, duh
-		$userTable = '{{users}}';
-		$userPk = 'id';
-		$userPkType = 'integer';
+		$nfy = Yii::app()->getModule('nfy');
+		$user = CActiveRecord::model($nfy->userclass);
+		$userTable = $user->tableName();
+		$userPk = $user->primaryKey() === null ? $user->tableSchema->primaryKey : $user->primaryKey();
+		$userPkType = $user->tableSchema->getColumn($userPk)->dbType;
 
 		$this->createTable('{{nfy_channels}}', array(
 			'id'=>'pk',
