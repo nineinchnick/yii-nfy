@@ -1,5 +1,7 @@
 <?php
 
+Yii::import('nfy.NfyModule');
+
 /**
  * The Nfy class acts like the CLogger class. Instead of collecting the messages,
  * it instantly passes them to each channel for processing, similar to CLogRouter
@@ -31,6 +33,15 @@ class Nfy {
 				'class'=>$channel->route_class,
 				'message_template'=>$channel->message_template,
 			));
+			if (!($route instanceof INfyRoute)) {
+				$error = Yii::t('NfyModule.app', 'Route class {route} specified for channel {channel_name} must implement the INfyRoute interface.', array(
+					'{route}' => $channel->route_class,
+					'{channel_name}' => $channel->name,
+				));
+				// fail silently so the normal app workflow won't be disrupted by invalid notification configuration
+				Yii::log($error, 'error', 'nfy');
+				continue;
+			}
 			$route->process($msg, $channel->id, $channel->subscriptions);
 		}
 	}

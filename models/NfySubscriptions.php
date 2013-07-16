@@ -7,7 +7,7 @@
  * @property integer $id
  * @property integer $channel_id
  * @property integer $user_id
- * @property string $push_transports
+ * @property string $transports
  * @property string $registered_on
  *
  * The followings are the available model relations:
@@ -43,7 +43,7 @@ class NfySubscriptions extends CActiveRecord
 		return array(
 			array('channel_id, user_id', 'required'),
 			array('channel_id, user_id', 'numerical', 'integerOnly'=>true),
-			array('push_transports, registered_on', 'safe'),
+			array('transports, registered_on', 'safe'),
 		);
 	}
 
@@ -68,7 +68,7 @@ class NfySubscriptions extends CActiveRecord
 			'id' => 'ID',
 			'channel_id' => 'Channel',
 			'user_id' => 'User',
-			'push_transports' => 'Push Transports',
+			'transports' => 'Transports',
 			'registered_on' => 'Registered On',
 		);
 	}
@@ -81,7 +81,7 @@ class NfySubscriptions extends CActiveRecord
 	{
 		$criteria=new CDbCriteria;
 
-		$criteria->compare('push_transports',$this->push_transports,true);
+		$criteria->compare('transports',$this->transports,true);
 		$criteria->compare('registered_on',$this->registered_on,true);
 
 		return new CActiveDataProvider($this, array(

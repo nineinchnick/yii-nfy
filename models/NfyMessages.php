@@ -8,10 +8,12 @@
  * @property integer $channel_id
  * @property string $logtime
  * @property string $message
+ * @property integer $user_id
  *
  * The followings are the available model relations:
  * @property NfyQueues[] $nfyQueues
  * @property NfyChannels $channel
+ * @property Users $user
  */
 class NfyMessages extends CActiveRecord
 {
@@ -41,8 +43,8 @@ class NfyMessages extends CActiveRecord
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('channel_id', 'required'),
-			array('channel_id', 'numerical', 'integerOnly'=>true),
+			array('channel_id, user_id', 'required'),
+			array('channel_id, user_id', 'numerical', 'integerOnly'=>true),
 			array('logtime, message', 'safe'),
 		);
 	}
@@ -57,6 +59,7 @@ class NfyMessages extends CActiveRecord
 		return array(
 			'queues' => array(self::HAS_MANY, 'NfyQueues', 'message_id'),
 			'channel' => array(self::BELONGS_TO, 'NfyChannels', 'channel_id'),
+			'user' => array(self::BELONGS_TO, 'Users', 'user_id'),
 		);
 	}
 
@@ -70,6 +73,7 @@ class NfyMessages extends CActiveRecord
 			'channel_id' => 'Channel',
 			'logtime' => 'Logtime',
 			'message' => 'Message',
+			'user_id' => 'User',
 		);
 	}
 

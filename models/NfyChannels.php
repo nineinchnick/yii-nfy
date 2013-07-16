@@ -6,10 +6,11 @@
  * The followings are the available columns in table '{{nfy_channels}}':
  * @property integer $id
  * @property string $name
- * @property string $level
- * @property string $category
- * @property string $criteria_callback
+ * @property string $levels
+ * @property string $categories
  * @property string $message_template
+ * @property boolean $enabled
+ * @property string $route_class
  *
  * The followings are the available model relations:
  * @property NfyMessages[] $nfyMessages
@@ -44,11 +45,11 @@ class NfyChannels extends CActiveRecord
 		// will receive user inputs.
 		return array(
 			array('name', 'required'),
-			array('name, level, category', 'length', 'max'=>128),
-			array('criteria_callback, message_template', 'safe'),
+			array('name, levels, categories, route_class', 'length', 'max'=>128),
+			array('message_template, enabled', 'safe'),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.
-			array('name, level, category, criteria_callback, message_template', 'safe', 'on'=>'search'),
+			array('name, levels, categories, message_template, enabled, route_class', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -73,10 +74,11 @@ class NfyChannels extends CActiveRecord
 		return array(
 			'id' => 'ID',
 			'name' => 'Name',
-			'level' => 'Level',
-			'category' => 'Category',
-			'criteria_callback' => 'Criteria Callback',
+			'levels' => 'Levels',
+			'categories' => 'Categories',
 			'message_template' => 'Message Template',
+			'enabled' => 'Enabled',
+			'route_class' => 'Route Class',
 		);
 	}
 
@@ -89,10 +91,11 @@ class NfyChannels extends CActiveRecord
 		$criteria=new CDbCriteria;
 
 		$criteria->compare('name',$this->name,true);
-		$criteria->compare('level',$this->level,true);
-		$criteria->compare('category',$this->category,true);
-		$criteria->compare('criteria_callback',$this->criteria_callback,true);
+		$criteria->compare('levels',$this->levels,true);
+		$criteria->compare('categories',$this->categories,true);
 		$criteria->compare('message_template',$this->message_template,true);
+		$criteria->compare('enabled',$this->enabled);
+		$criteria->compare('route_class',$this->route_class,true);
 
 		return new CActiveDataProvider($this, array(
 			'criteria'=>$criteria,

@@ -47,7 +47,7 @@ A widget displaying (html5) notifications from queues using ajax polling.
 
 Download and extract.
 
-Enable module in configuration. See the configuration section how to specify users table name and its primary key type.
+Enable module in configuration. Do it in both main and console configs, because some settings are used in migrations. See the configuration section how to specify users table name and its primary key type.
 
 Import module classes from:
 	'application.modules.nfy.components.Nfy',
@@ -131,8 +131,27 @@ On the other hand, when messages are delivered only internally and there is no n
 
 An implementation of asynchronous notifications delivered through a Redis server could be found in the [vnotifier extension](http://www.yiiframework.com/extension/vnotifier).
 
+## Changelog
+
+### 0.5 - 2013-07-16
+
+Backward compatibility breaking:
+
+* Added routes and default NfyDbRoute implementation, this required refactoring the database schema, so remember to apply migrations when upgrading. The 'criteria_callback' column has been removed and replaced by the 'canSend()' method of the NfyDbRoute class.
+
+Other changes:
+
+* Saving the sending user id, so it can be used to filter recipients and customize message body.
+* Added userClass parameter to the module to extract user table name and its primary key column name and type.
+* Updated the documentation.
+
+### 0.3 - 2013-07-13
+
+* Initial release
+
 ## Todo
 
-* Allow creating a customized messages for each queue entry instead of using same message
+* Add push notifications example - add a server and replace ajax in webNotifications extension
+* Add a NyMqRoute class
 * Create a CRUD to manage channels and subscriptions and implement restrictions which channels are available for users to subscribe to.
 * Provide a behavior similar to audit trail extension to plug in CActiveRecord

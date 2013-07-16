@@ -13,7 +13,7 @@ class DefaultController extends Controller
 			'queues' => array(
 				'together'=>true,
 				'on'=>'queues.is_delivered=FALSE',
-				'with'=>'message',
+				'with'=>'defaultMessage',
 			),
 			'channel'=>array('together'=>true),
 		);
@@ -21,13 +21,15 @@ class DefaultController extends Controller
 		foreach($subscriptions as $subscription) foreach($subscription->queues as $queue) {
 			$queue->delivered_on = date('Y-m-d H:i:s');
 			$queue->is_delivered = true;
-			$message = $queue->message;
 			if ($queue->save()) {
-				$data['messages'][] = array(
+				$notification = array(
 					'title'=>$subscription->channel->name,
-					'body'=>$message->message,
-					'sound'=>Yii::app()->baseUrl.'/sounds/Door Bell-SoundBible.com-1986366504.wav',
+					'body'=>$queue->message !== null ? $queue->message : $queue->defaultMessage->message,
 				);
+				if ($this->getModule()->soundUrl!==null) {
+					$notification['sound'] = $this->createAbsoluteUrl($this->getModule()->soundUrl);
+				}
+				$data['messages'][] = $notification;
 			}
 		}
 		header("Content-type: application/json");

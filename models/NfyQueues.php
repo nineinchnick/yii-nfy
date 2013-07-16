@@ -7,11 +7,13 @@
  * @property integer $id
  * @property integer $subscription_id
  * @property integer $message_id
- * @property boolean $delivered
+ * @property boolean $is_delivered
+ * @property string $delivered_on
+ * @property string $message
  *
  * The followings are the available model relations:
  * @property NfySubscriptions $subscription
- * @property NfyMessages $message
+ * @property NfyMessages $message0
  */
 class NfyQueues extends CActiveRecord
 {
@@ -43,7 +45,7 @@ class NfyQueues extends CActiveRecord
 		return array(
 			array('subscription_id, message_id', 'required'),
 			array('subscription_id, message_id', 'numerical', 'integerOnly'=>true),
-			array('delivered', 'safe'),
+			array('is_delivered, delivered_on, message', 'safe'),
 		);
 	}
 
@@ -54,7 +56,7 @@ class NfyQueues extends CActiveRecord
 	{
 		return array(
 			'subscription' => array(self::BELONGS_TO, 'NfySubscriptions', 'subscription_id'),
-			'message' => array(self::BELONGS_TO, 'NfyMessages', 'message_id'),
+			'defaultMessage' => array(self::BELONGS_TO, 'NfyMessages', 'message_id'),
 		);
 	}
 
@@ -67,7 +69,9 @@ class NfyQueues extends CActiveRecord
 			'id' => 'ID',
 			'subscription_id' => 'Subscription',
 			'message_id' => 'Message',
-			'delivered' => 'Delivered',
+			'is_delivered' => 'Is Delivered',
+			'delivered_on' => 'Delivered On',
+			'defaultMessage' => 'Message',
 		);
 	}
 
@@ -79,7 +83,9 @@ class NfyQueues extends CActiveRecord
 	{
 		$criteria=new CDbCriteria;
 
-		$criteria->compare('delivered',$this->delivered);
+		$criteria->compare('is_delivered',$this->is_delivered);
+		$criteria->compare('delivered_on',$this->delivered_on,true);
+		$criteria->compare('message',$this->message,true);
 
 		return new CActiveDataProvider($this, array(
 			'criteria'=>$criteria,
