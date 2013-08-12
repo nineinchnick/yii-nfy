@@ -88,4 +88,10 @@ class NfySubscriptions extends CActiveRecord
 			'criteria'=>$criteria,
 		));
 	}
+
+	public function beforeSave() {
+		if ($this->isNewRecord && $this->registered_on === null)
+			$this->registered_on = date('Y-m-d H:i:s');
+		return true;
+	}
 }

@@ -105,12 +105,14 @@ class NfyChannels extends CActiveRecord
 	/**
 	 * Subscribes user to this channel.
 	 * @param integer $user_id
+	 * @param string $transports default transports
 	 * @return boolean
 	 */
-	public function subscribe($user_id) {
+	public function subscribe($user_id, $transports = null) {
 		$subscription = new NfySubscriptions;
 		$subscription->channel_id = $this->id;
 		$subscription->user_id = $user_id;
+		$subscription->transports = $transports;
 		return $subscription->save();
 	}
 
