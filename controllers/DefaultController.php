@@ -8,7 +8,28 @@ class DefaultController extends Controller
 	}
 
 	public function actionPoll() {
-		$data = array('messages'=>array());
+		Yii::app()->session->close();
+
+		$data = array();
+		$data['messages'] = $this->getMessages();
+
+		$pollFor = $this->getModule()->longPolling;
+		$maxPoll = $this->getModule()->maxPollCount;
+		if ($pollFor && $maxPol && empty($data['messages'])) {
+			while(empty($data['messages']) && $maxPoll) {
+				$data['messages'] = $this->getMessages();
+				usleep($pollFor * 1000);
+				$maxPoll--;
+			}
+		}
+
+		header("Content-type: application/json");
+		Yii::app()->getClientScript()->reset();
+		echo json_encode($data);
+	}
+
+	protected function getMessages() {
+		$result = array();
 		$with = array(
 			'queues' => array(
 				'together'=>true,
@@ -30,11 +51,9 @@ class DefaultController extends Controller
 				if ($this->getModule()->soundUrl!==null) {
 					$notification['sound'] = $this->createAbsoluteUrl($this->getModule()->soundUrl);
 				}
-				$data['messages'][] = $notification;
+				$result[] = $notification;
 			}
 		}
-		header("Content-type: application/json");
-		Yii::app()->getClientScript()->reset();
-		echo json_encode($data);
+		return $result;
 	}
 }

@@ -36,7 +36,7 @@ class m130713_201034_notifications_install extends CDbMigration
 			'id'=>'pk',
 			'subscription_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_queues}}_subscription_id_fkey REFERENCES {{nfy_subscriptions}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
 			'message_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_queues}}_message_id_fkey REFERENCES {{nfy_messages}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'is_delivered'=>'boolean not null default false',
+			'is_delivered'=>'boolean not null default '.($driver=='sqlite'?'0':'false'),
 			'delivered_on'=>'timestamp',
 		));
 
