@@ -18,7 +18,7 @@ class Nfy {
 	 */
 	public static function log($msg,$level=CLogger::LEVEL_INFO,$category='application') {
 		$cacheDuration=3600;
-		$channels = NfyChannels::model()->cache($cacheDuration)->findAll('t.enabled=TRUE');
+		$channels = NfyChannels::model()->cache($cacheDuration)->findAll('t.enabled=:enabled', array(':enabled'=>true));
 		foreach($channels as $key=>$channel) {
 			if ($channel->levels !== null) {
 				$levels=preg_split('/[\s,]+/',strtolower($channel->levels),-1,PREG_SPLIT_NO_EMPTY);

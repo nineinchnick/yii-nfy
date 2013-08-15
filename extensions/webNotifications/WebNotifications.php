@@ -13,6 +13,7 @@ class WebNotifications extends CWidget {
 	public static function initClientScript() {
         $bu = Yii::app()->assetManager->publish(dirname(__FILE__) . '/assets/');
         $cs = Yii::app()->clientScript;
+		$cs->registerCoreScript('jquery');
         $cs->registerCssFile($bu . '/css/webnotification.min.css');
         $cs->registerScriptFile($bu . '/js/jquery.webnotification'.(YII_DEBUG ? '' : '.min').'.js');
         $cs->registerScriptFile($bu . '/js/main.js');
