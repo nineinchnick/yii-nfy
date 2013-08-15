@@ -9,10 +9,22 @@ class m130715_211034_refactor_columns_add_from extends CDbMigration
 		$userTable = $user->tableName();
 		$userPk = $user->primaryKey() === null ? $user->tableSchema->primaryKey : $user->primaryKey();
 		$userPkType = $user->tableSchema->getColumn($userPk)->dbType;
+		$driver = $this->dbConnection->getDriverName();
 
-		$this->delete('{{nfy_messages}}');
-		$this->addColumn('{{nfy_messages}}', 'user_id', $userPkType.' not null');
-		$this->addForeignKey('{{nfy_messages}}_user_id_fkey', '{{nfy_messages}}', 'user_id', $userTable, $userPk, 'CASCADE', 'CASCADE');
+		if ($driver=='sqlite') {
+			$this->dropTable('{{nfy_messages}}');
+			$this->createTable('{{nfy_messages}}', array(
+				'id'=>'pk',
+				'channel_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_messages}}_channel_id_fkey REFERENCES {{nfy_channels}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
+				'user_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_messages}}_user_id_fkey REFERENCES '.$userTable.'('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE' : ''),
+				'logtime'=>'timestamp',
+				'message'=>'text',
+			));
+		} else {
+			$this->delete('{{nfy_messages}}');
+			$this->addColumn('{{nfy_messages}}', 'user_id', $userPkType.' not null');
+			$this->addForeignKey('{{nfy_messages}}_user_id_fkey', '{{nfy_messages}}', 'user_id', $userTable, $userPk, 'CASCADE', 'CASCADE');
+		}
 
 		$this->renameColumn('{{nfy_channels}}', 'level', 'levels');
 		$this->renameColumn('{{nfy_channels}}', 'category', 'categories');
