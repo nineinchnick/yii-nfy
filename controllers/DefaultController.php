@@ -12,8 +12,9 @@ class DefaultController extends Controller
 		$with = array(
 			'queues' => array(
 				'together'=>true,
-				'on'=>'queues.is_delivered=FALSE',
+				'on'=>'queues.is_delivered=:is_delivered',
 				'with'=>'defaultMessage',
+				'params'=>array(':is_delivered'=>false),
 			),
 			'channel'=>array('together'=>true),
 		);
