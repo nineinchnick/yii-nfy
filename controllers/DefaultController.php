@@ -15,7 +15,7 @@ class DefaultController extends Controller
 
 		$pollFor = $this->getModule()->longPolling;
 		$maxPoll = $this->getModule()->maxPollCount;
-		if ($pollFor && $maxPol && empty($data['messages'])) {
+		if ($pollFor && $maxPoll && empty($data['messages'])) {
 			while(empty($data['messages']) && $maxPoll) {
 				$data['messages'] = $this->getMessages();
 				usleep($pollFor * 1000);
