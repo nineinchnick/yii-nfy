@@ -161,7 +161,7 @@ Configure the WebNotifications widget to receive messages through a web socket:
 		'onmessage'=>'js:function(_socket){return function(e) {
 			var message = JSON.parse(e.data);
 			var data = JSON.parse(message.data);
-			if (typeof data.title != 'undefined' && typeof data.body != 'undefined') {
+			if (typeof data.title != "undefined" && typeof data.body != "undefined") {
 				notificationsPoller.addMessage(data);
 				notificationsPoller.display();
 			}
