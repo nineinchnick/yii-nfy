@@ -196,6 +196,8 @@ By using the Nfy component and NfyDbRoute class
 
 Same as above, the NfyDbRoute class could be used for message creation and filtering. The only difference is that is it sent as an email instead of put into a database queue.
 
+For an example, see the components/NfyOtherRoute.php file, where the NfyOtherRoute class extends NfyDbRoute by adding two transports, email and xmpp (jabber).
+
 #### Message queue
 
 By using an external service, like a message queue server
@@ -218,6 +220,10 @@ By configuring the WebNotifications widget messages could be read by:
 * connect to a web socket and wait for new items
 
 ## Changelog
+
+### 0.6.6 - 2013-08-20
+
+* An example class NfyOtherRoute extending NfyDbRoute adding email and xmpp transports.
 
 ### 0.6.5 - 2013-08-20
 
@@ -255,4 +261,3 @@ Other changes:
 
 * Create a CRUD to manage channels and subscriptions and implement restrictions which channels are available for users to subscribe to.
 * Provide a behavior similar to audit trail extension to plug in CActiveRecord
-* Add two more transports to the NfyDbRoute: XMPP (jabber) and SMTP (email)
