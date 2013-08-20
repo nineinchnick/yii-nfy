@@ -1,15 +1,39 @@
 (function( notificationsPoller, $, undefined ) {
 	"use strict";
 
+	var _method_poll = 'poll',
+	    _method_push = 'push';
+
 	var _defaultSettings = {
 		url: null,
+		baseUrl: null,
+		method: _method_poll,
 		// time in miliseconds, how often to check for new messages
-		interval: 3000
+		pollInterval: 3000,
+		// true if requests are cross domain
+		xDomain: false,
+		websocket: {}
 	};
 	var _settings;
+	/**
+	 * @var object in polling mode: active ajax request
+	 */
 	var _jqxhr;
+	/**
+	 * @var object in polling mode: active timer
+	 */
 	var _timer;
+	/**
+	 * @var object in push mode: socket.io
+	 */
+	var _socket;
+	/**
+	 * @var array messages stack
+	 */
 	var _messages = [];
+	/**
+	 * @var boolean did user agreed to receive notifications
+	 */
 	var _ready = false;
 
 	notificationsPoller.wrapApi = function() {
@@ -65,7 +89,17 @@
 
 		_settings = $.extend({}, _defaultSettings, settings);
 
-		notificationsPoller.poll();
+		if (_settings.method == _method_poll) {
+			notificationsPoller.poll();
+		} else {
+			_socket = new WebSocket(_settings.url);
+			foreach(var i in _settings.websocket) {
+				if (typeof _settings.websocket[i] == 'function') {
+					_socket[i] = _settings.websocket[i](_socket);
+				}
+			}
+			window.WEB_SOCKET_SWF_LOCATION = _settings.baseUrl + '/js/WebSocketMain'+(_settings.xDomain ? 'Insecure' : '')+'.swf';
+		}
 	};
 
 	notificationsPoller.ask = function() {
@@ -90,14 +124,18 @@
 
 	notificationsPoller.process = function(data) {
 		if (typeof data.messages == 'undefined' || data.messages.length == 0) {
-			_timer = window.setTimeout(notificationsPoller.poll, _settings.interval);
+			_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
 			return false;
 		}
 		for (var i = 0; i < data.messages.length; i++) {
 			_messages.push(data.messages[i]);
 		}
 		notificationsPoller.display();
-		_timer = window.setTimeout(notificationsPoller.poll, _settings.interval);
+		_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
+	};
+
+	notificationsPoller.addMessage(message) {
+		_messages.push(message);
 	};
 
 	notificationsPoller.display = function() {
