@@ -127,8 +127,7 @@ $test->save();
 
 Put anywhere in your layout or views or controller.
 
-~~~
-[php]
+~~~php
 $this->widget('nfy.extensions.webNotifications.WebNotifications', array('url'=>$this->createUrl('/nfy/default/poll')));
 ~~~
 
@@ -136,8 +135,7 @@ $this->widget('nfy.extensions.webNotifications.WebNotifications', array('url'=>$
 
 Instead of ussing Nfy::log, publish messages directly to [Pusher.com](http://pusher.com/) service, using [pusher](http://www.yiiframework.com/extension/pusher) extension:
 
-~~~
-[php]
+~~~php
 	$pusher = Yii::createComponent(array(
 		'class' => 'Pusher',
 		'key' => 'XXX',
@@ -149,8 +147,7 @@ Instead of ussing Nfy::log, publish messages directly to [Pusher.com](http://pus
 
 Configure the WebNotifications widget to receive messages through a web socket:
 
-~~~
-[php]
+~~~php
 <?php $this->widget('nfy.extensions.webNotifications.WebNotifications', array(
 	'url'=>'ws://ws.pusherapp.com:80/app/XXXclient=javascript&protocol=6',
 	'method'=>WebNotifications::METHOD_PUSH,
