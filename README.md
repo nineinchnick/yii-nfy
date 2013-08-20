@@ -222,11 +222,16 @@ By configuring the WebNotifications widget messages could be read by:
 
 ## Changelog
 
-### 0.6 - 2013-08-20
+### 0.6.5 - 2013-08-20
 
 * Fixed a typo in the default controller.
 * Added support for web sockets in WebNotifications widget.
 * More examples and updated docs.
+
+### 0.6 - 2013-08-15
+
+* Enabled long polling
+* Fixes in migrations for SQLite
 
 ### 0.5.5 - 2013-08-12
 
