@@ -93,7 +93,7 @@
 			notificationsPoller.poll();
 		} else {
 			_socket = new WebSocket(_settings.url);
-			foreach(var i in _settings.websocket) {
+			for(var i in _settings.websocket) {
 				if (typeof _settings.websocket[i] == 'function') {
 					_socket[i] = _settings.websocket[i](_socket);
 				}
@@ -134,7 +134,7 @@
 		_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
 	};
 
-	notificationsPoller.addMessage(message) {
+	notificationsPoller.addMessage = function(message) {
 		_messages.push(message);
 	};
 
