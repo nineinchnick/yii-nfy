@@ -44,7 +44,7 @@
 				window.Notification = function(title, args) {
 					var n = window.webkitNotifications.createNotification(args.iconUrl || '', title, args.body || '');
 					$.each(['onshow', 'onclose'], function(k, i) { if(args[k]) this[k] = args[k]; });
-					n.ondisplay = function() { if(this.onshow) this.onshow() };
+					n.ondisplay = function() { if(this.onshow) this.onshow(); };
 					n.show();
 					return n;
 				};
@@ -69,7 +69,7 @@
 						/*position: 'bottom-right',
 						autoclose: false,
 						expire: null,*/
-						notification: { ntitle: title, nbody: args.body, icon: args.iconUrl || '', tag: args.tag || '' },
+						notification: { ntitle: title, nbody: args.body, icon: args.iconUrl || '', tag: args.tag || '' }
 					};
 					if (args.onshow) config.onShowFn = args.onshow;
 					if (args.onclose) config.onCloseFn = args.onclose;
@@ -89,12 +89,15 @@
 
 		_settings = $.extend({}, _defaultSettings, settings);
 
-		if (_settings.method == _method_poll) {
+		if (_settings.method === _method_poll) {
+            if('onopen' in _settings.websocket) {
+                _settings.websocket['onopen'](null)(null);
+            }
 			notificationsPoller.poll();
 		} else {
 			_socket = new WebSocket(_settings.url);
 			for(var i in _settings.websocket) {
-				if (typeof _settings.websocket[i] == 'function') {
+				if (typeof _settings.websocket[i] === 'function') {
 					_socket[i] = _settings.websocket[i](_socket);
 				}
 			}
@@ -103,7 +106,7 @@
 	};
 
 	notificationsPoller.ask = function() {
-		if (!window.Notification.permission!='granted') {
+		if (!window.Notification.permission!=='granted') {
 			window.Notification.requestPermission(function(){
 				_ready = true;
 			});
@@ -117,18 +120,19 @@
 	notificationsPoller.poll = function() {
 		_jqxhr = $.ajax({
 			url: _settings.url,
+            cache: false,
 			success: notificationsPoller.process,
 			error: notificationsPoller.error
 		});
 	};
 
 	notificationsPoller.process = function(data) {
-		if (typeof data.messages == 'undefined' || data.messages.length == 0) {
+		if (typeof data === 'undefined' || typeof data.messages === 'undefined' || data.messages.length === 0) {
 			_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
 			return false;
 		}
 		for (var i = 0; i < data.messages.length; i++) {
-			_messages.push(data.messages[i]);
+			notificationsPoller.addMessage(data.messages[i]);
 		}
 		notificationsPoller.display();
 		_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
@@ -139,13 +143,20 @@
 	};
 
 	notificationsPoller.display = function() {
+        for(var _msg in _messages) {
+            if('onmessage' in _settings.websocket) {
+                _settings.websocket['onmessage'](null)(_msg);
+            }
+        }
+        
 		if (!_ready)
 			return false;
 
 		while(_messages.length) {
 			var msg = _messages.shift();
+
 			new window.Notification(msg.title, {body: msg.body});
-			if (typeof msg.sound != 'undefined') {
+			if (typeof msg.sound !== 'undefined') {
 				notificationsPoller.sound(msg.sound);
 			}
 		}
@@ -157,6 +168,9 @@
 	};
 
 	notificationsPoller.error = function() {
+        if('onerror' in _settings.websocket) {
+            _settings.websocket['onerror'](null)(null);
+        }
 		console.log('Failed to check new messages at '+_settings.url);
 	};
 }( window.notificationsPoller = window.notificationsPoller || {}, jQuery ));

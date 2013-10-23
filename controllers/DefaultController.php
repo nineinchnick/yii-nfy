@@ -23,9 +23,14 @@ class DefaultController extends Controller
 			}
 		}
 
-		header("Content-type: application/json");
-		Yii::app()->getClientScript()->reset();
-		echo json_encode($data);
+        if(empty($data['messages'])) {
+            header("HTTP/1.0 304 Not Modified");
+            exit();
+        } else {
+            header("Content-type: application/json");
+            Yii::app()->getClientScript()->reset();
+            echo json_encode($data);
+        }
 	}
 
 	protected function getMessages() {
@@ -40,20 +45,22 @@ class DefaultController extends Controller
 			'channel'=>array('together'=>true),
 		);
 		$subscriptions = NfySubscriptions::model()->with($with)->findAll('t.user_id=:user_id', array(':user_id'=>Yii::app()->user->getId()));
-		foreach($subscriptions as $subscription) foreach($subscription->queues as $queue) {
-			$queue->delivered_on = date('Y-m-d H:i:s');
-			$queue->is_delivered = true;
-			if ($queue->save()) {
-				$notification = array(
-					'title'=>$subscription->channel->name,
-					'body'=>$queue->message !== null ? $queue->message : $queue->defaultMessage->message,
-				);
-				if ($this->getModule()->soundUrl!==null) {
-					$notification['sound'] = $this->createAbsoluteUrl($this->getModule()->soundUrl);
-				}
-				$result[] = $notification;
-			}
-		}
+		foreach($subscriptions as $subscription) {
+            foreach($subscription->queues as $queue) {
+                $queue->delivered_on = date('Y-m-d H:i:s');
+                $queue->is_delivered = true;
+                if ($queue->save()) {
+                    $notification = array(
+                        'title'=>$subscription->channel->name,
+                        'body'=>$queue->message !== null ? $queue->message : $queue->defaultMessage->message,
+                    );
+                    if ($this->getModule()->soundUrl!==null) {
+                        $notification['sound'] = $this->createAbsoluteUrl($this->getModule()->soundUrl);
+                    }
+                    $result[] = $notification;
+                }
+            }
+        }
 		return $result;
 	}
 }
