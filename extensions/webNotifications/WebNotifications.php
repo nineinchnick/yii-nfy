@@ -29,7 +29,7 @@ class WebNotifications extends CWidget {
 	 *            'js:function(socket){return function(e){console.log(e);};}' 
 	 */
 	public $websocket = array();
-
+    
 	/**
 	 * Registers required JS libraries and CSS files.
 	 * @param string $method use either METHOD_POLL or METHOD_PULL constants

@@ -2,46 +2,19 @@
 
 This is a module for [Yii framework](http://www.yiiframework.com/) that provides:
 
+* a generic queue component
+* a Publish/Subscribe message delivery pattern
+* a SQL database queue implementation
 * a configurable way to send various notifications, messages and tasks to a queue
-* a basic widget to read such items from queue and display them to the user.
+* a basic widget to read such items from queue and display them to the user as system notifications
+* a basic widget to put in a navbar that displays notifications and/or messages in a popup
+* a basic CRUD to manage and/or debug queues or use as a simple messanger
 
-Messages could be passed directly as strings or created from two versions of a model, before and after updating its attributes. The created message could depend on:
+Messages could be passed directly as strings or created from some objects, like Active Records. This could be used to log all changes to the models, exactly like the [audittrail2](http://www.yiiframework.com/extension/audittrail2) extension.
 
-* Model class
-* Attributes modified
-* Values before and after modification
-
-As a side effect, this could be used to log all changes to the models, exactly like the [audittrail2](http://www.yiiframework.com/extension/audittrail2) extension.
-
-Message filtering and creation logic is grouped into _channels_. Message recipients are selected by subscribing them to those channels.
+When recipients are subscribed to a channel, message delivery can depend on category filtering, much like in logging system provided by the framework.
 
 A simple SQL queue implementation is provided if a MQ server is not available or not necessary.
-
-## Components
-
-A message is sent by calling Nfy::log method. Then, for each enabled channel:
-
-* Channel's route class (NfyDbRoute) determines if message can be sent
-* The message is filtered, creating the final string
-* For each of channel's subscriptions, route determines if message can be delivered to subscribing user
-* For each transport enabled for that subscription the message is delivered
-* If the NfyDbRoute saved a messaged in a database queue, it could be displayed as a web notification by polling that queue
-
-### Nfy
-
-A simple helper class loading enabled channels, filtering message using levels and categories and handling processing to the channel's route.
-
-This is an equivalent of a CLogger.
-
-### NfyDbRoute
-
-This class defines message delivery criteria, message formatting and implements transports. By default, it saves messages to a database queue.
-
-It can be extended to implement other delivery methods, such as a Message Queue.
-
-### WebNotifications
-
-A widget displaying (html5) notifications from queues using ajax polling or reading from a web socket.
 
 ## Installation
 
@@ -49,53 +22,70 @@ Download and extract.
 
 Enable module in configuration. Do it in both main and console configs, because some settings are used in migrations. See the configuration section how to specify users table name and its primary key type.
 
-Import module classes from:
-	'application.modules.nfy.components.Nfy',
-	'application.modules.nfy.models.*',
-
-Apply migrations:
+Copy migrations to your migrations folder and adjust dates in file and class names. Then apply migrations:
 
 ~~~
-./yiic migrate --migrationPath=nfy.migrations
+./yiic migrate
 ~~~
 
-Create some channels and subscribe users to them.
+Define some queues as application components and optionally enable the module, see the next section.
 
 ## Configuration
+
+### Queue components
+
+Define each queue as an application component.
+
+~~~php
+'components' => array(
+	'queue' => array(
+		'class' => 'nfy.components.NfyDbQueue',
+		'name' => 'Notifications',
+		'timeout' => 30,
+	),
+	// ...
+),
+~~~
+
+Then you can send and receive messages through this component:
+
+~~~php
+// send one message 'test'
+Yii::app()->queue->send('test');
+// receive all available messages without using subscriptions and immediately delete them from the queue
+$messages = $queue->recv();
+~~~
+
+Or you could subscribe some users to it:
+
+~~~php
+Yii::app()->queue->subscribe(Yii:app()->user->getId());
+// send one message 'test'
+Yii::app()->queue->send('test');
+// receive all available messages for current user and immediately delete them from the queue
+$messages = $queue->recv(Yii:app()->user->getId());
+// if there are any other users subscribed, they will receive the message independently
+~~~
 
 ### Module parameters
 
 By specifying the users model class name in the _userClass_ property proper table name and primary key column name will be used in migrations.
 
-### Minimal setup
-
-Provide an extended version of NfyDbRoute (called MyDbRoute in the example below) to implement custom message filtering/formatting.
-
-~~~php
-// initialize module's configuration, this should be done via migrations or CRUD
-// create a channel with a basic filter and template
-$channel = new NfyChannels;
-$channel->name = 'test';
-$channel->route_class = 'MyDbRoute';
-$channel->message_template = 'Attribute changed from {old.attribute} to {new.attribute}';
-$channel->save();
-$subscription = new NfySubscriptions;
-$subscription->user_id = Yii::app()->user->getId();
-$subscription->channel_id = $channel->id;
-$subscription->save();
-~~~
-
 ## Usage examples
 
 ### Broadcasting
 
-Send a message to every user.
+To send a message to every user create a queue and just subscribe every user to it.
 
-First create a default channel and subscribe every user to it. Then just call Nfy::log().
+### Filtering
+
+When subscribing a user to a queue a list of categories can be specified. Only messages with matching category will be delivered to this subscription. This system is modelled after logger from the framework.
 
 ### Notifying model changes
 
 Monitor one model for changes and notify some users.
+
+By extending the NfyDbQueue or NfyQueue classes you can handle messages that are not strings and create a string message body from such data.
 
 ~~~php
 // this could be your CActiveRecord model
@@ -111,7 +101,7 @@ class Test extends CActiveRecord {
 	public function afterSave($event) {
 		$old = clone $this;
 		$old->setAttributes($this->_old);
-		Nfy::log(array('old'=>$old,'new'=>$this));
+		Yii::app()->queue->send(array('old'=>$old,'new'=>$this), 'logs.audit');
 		return parent::afterSave($event);
 	}
 }
@@ -120,7 +110,6 @@ class Test extends CActiveRecord {
 $test = Test::model()->find();
 $test->attribute = 'value';
 $test->save();
-// now the table nfy_queues contains a logged message
 ~~~
 
 ### Display notifications
@@ -128,12 +117,12 @@ $test->save();
 Put anywhere in your layout or views or controller.
 
 ~~~php
-$this->widget('nfy.extensions.webNotifications.WebNotifications', array('url'=>$this->createUrl('/nfy/default/poll')));
+$this->widget('nfy.extensions.webNotifications.WebNotifications', array('url'=>$this->createUrl('/nfy/default/poll', array('id'=>'queueComponentId'))));
 ~~~
 
 ### Using together with Pusher
 
-Instead of ussing Nfy::log, publish messages directly to [Pusher.com](http://pusher.com/) service, using [pusher](http://www.yiiframework.com/extension/pusher) extension:
+Instead of ussing NfyQueue, publish messages directly to [Pusher.com](http://pusher.com/) service, using [pusher](http://www.yiiframework.com/extension/pusher) extension:
 
 ~~~php
 	$pusher = Yii::createComponent(array(
@@ -184,17 +173,9 @@ Remember, that when a message is being published that process should be fast and
 
 Implementing queues in a RDBMS could be considered an anti-pattern but if its for a low volume traffic it's an acceptable solution because it doesn't require any external components or services.
 
-By using the Nfy component and NfyDbRoute class
-
-* Publish a message by calling Nfy::log()
-* Conditions for a channel (channels table entry and corresponding route class) are checked
-* The final text message is prepared based on logic contained in the NfyDbRoute class
-* Message gets delivered (INSERTed) to queues (tables) for each user subscription (subscriptions table entry)
-* When checking for new messages, they are dequeued (UPDATEd)
-
 #### Emailing
 
-Same as above, the NfyDbRoute class could be used for message creation and filtering. The only difference is that is it sent as an email instead of put into a database queue.
+By using the NfyDbQueue class, NfyQueue could be extended to send emails instead of writing data to a sql database.
 
 #### Message queue
 
@@ -218,6 +199,15 @@ By configuring the WebNotifications widget messages could be read by:
 * connect to a web socket and wait for new items
 
 ## Changelog
+
+### 0.9 - 2013-12-28
+
+__Warning!__ This version breaks backward compatibility. All database tables must be dropped and migrations has to be run again.
+
+* Major refactoring to provide a generic queue component with improved interface.
+* Rerwritten message filtering and subscription delivery.
+* Support for locking messages with a timeout.
+* Basic CRUD to manage/debug queues or use as a simple messanger interface.
 
 ### 0.6.5 - 2013-08-20
 
@@ -256,3 +246,4 @@ Other changes:
 * Create a CRUD to manage channels and subscriptions and implement restrictions which channels are available for users to subscribe to.
 * Provide a behavior similar to audit trail extension to plug in CActiveRecord
 * Add two more transports to the NfyDbRoute: XMPP (jabber) and SMTP (email)
+

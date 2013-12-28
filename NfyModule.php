@@ -20,6 +20,14 @@ class NfyModule extends CWebModule
 	 */
 	public $maxPollCount = 30;
 
+	/**
+	 * @inheritdoc
+	 */
+	public function getVersion()
+	{
+		return '0.9';
+	}
+
 	public function init()
 	{
 		$this->setImport(array(

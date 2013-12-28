@@ -2,16 +2,35 @@
 
 class DefaultController extends Controller
 {
+    public function filters() {
+        return array(
+            'accessControl',
+        );
+    }
+
+    public function accessRules() {
+        return array(
+            array('allow', 'actions' => array('index'), 'users' => array('@')),
+            array('allow', 'actions' => array('poll'), 'users' => array('*')),
+            array('deny', 'users' => array('*')),
+        );
+    }
+    
 	public function actionIndex()
 	{
 		$this->render('index');
 	}
 
-	public function actionPoll() {
+	/**
+	 * @param string $id id of the queue component
+	 * @param boolean $subscribed should the queue be checked using current user's subscription
+	 */
+    public function actionPoll($id, $subscribed=true)
+    {
 		Yii::app()->session->close();
 
 		$data = array();
-		$data['messages'] = $this->getMessages();
+		$data['messages'] = $this->getMessages($id, $subscribed);
 
 		$pollFor = $this->getModule()->longPolling;
 		$maxPoll = $this->getModule()->maxPollCount;
@@ -33,34 +52,32 @@ class DefaultController extends Controller
         }
 	}
 
-	protected function getMessages() {
-		$result = array();
-		$with = array(
-			'queues' => array(
-				'together'=>true,
-				'on'=>'queues.is_delivered=:is_delivered',
-				'with'=>'defaultMessage',
-				'params'=>array(':is_delivered'=>false),
-			),
-			'channel'=>array('together'=>true),
-		);
-		$subscriptions = NfySubscriptions::model()->with($with)->findAll('t.user_id=:user_id', array(':user_id'=>Yii::app()->user->getId()));
-		foreach($subscriptions as $subscription) {
-            foreach($subscription->queues as $queue) {
-                $queue->delivered_on = date('Y-m-d H:i:s');
-                $queue->is_delivered = true;
-                if ($queue->save()) {
-                    $notification = array(
-                        'title'=>$subscription->channel->name,
-                        'body'=>$queue->message !== null ? $queue->message : $queue->defaultMessage->message,
-                    );
-                    if ($this->getModule()->soundUrl!==null) {
-                        $notification['sound'] = $this->createAbsoluteUrl($this->getModule()->soundUrl);
-                    }
-                    $result[] = $notification;
-                }
-            }
+    protected function getMessages($id, $subscribed=true)
+    {
+		$queue = Yii::app()->getComponent($id);
+		if (!($queue instanceof NfyQueueInterface))
+			return array();
+
+		$messages = $queue->recv($subscribed ? Yii::app()->user->getId() : null, -1, NfyQueue::GET_DELETE);
+
+        if (empty($messages)) {
+            return array();
         }
-		return $result;
+
+        $messages = array_slice($messages, 0, 20);
+        $soundUrl = $this->getModule()->soundUrl !== null ? $this->createAbsoluteUrl($this->getModule()->soundUrl) : null;
+
+        $results = array();
+        foreach($messages as $message) {
+            $result = array(
+                'title'=>$queue->name,
+                'body'=>$message->body,
+            );
+            if ($soundUrl!==null) {
+                $result['sound'] = $soundUrl;
+            }
+            $results[] = $result;
+        }
+		return $results;
 	}
 }

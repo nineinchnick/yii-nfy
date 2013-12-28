@@ -134,6 +134,7 @@
 		for (var i = 0; i < data.messages.length; i++) {
 			notificationsPoller.addMessage(data.messages[i]);
 		}
+
 		notificationsPoller.display();
 		_timer = window.setTimeout(notificationsPoller.poll, _settings.pollInterval);
 	};
@@ -143,18 +144,26 @@
 	};
 
 	notificationsPoller.display = function() {
-        for(var _msg in _messages) {
-            if('onmessage' in _settings.websocket) {
-                _settings.websocket['onmessage'](null)(_msg);
+        if('onmessage' in _settings.websocket) {
+            for (var i = 0; i < _messages.length; i++) {
+                var ret = _settings.websocket['onmessage'](null)(_messages[i]);
+                
+                if(typeof ret !== 'undefined' && !ret) {
+                    delete _messages[i];
+                }
             }
         }
-        
+
 		if (!_ready)
 			return false;
 
 		while(_messages.length) {
 			var msg = _messages.shift();
-
+            
+            if(typeof msg === 'undefined') {
+                continue;
+            }
+            
 			new window.Notification(msg.title, {body: msg.body});
 			if (typeof msg.sound !== 'undefined') {
 				notificationsPoller.sound(msg.sound);

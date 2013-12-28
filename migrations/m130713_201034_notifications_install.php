@@ -7,61 +7,57 @@ class m130713_201034_notifications_install extends CDbMigration
 		$nfy = Yii::app()->getModule('nfy');
 		$user = CActiveRecord::model($nfy->userClass);
 		$userTable = $user->tableName();
-		$userPk = $user->primaryKey() === null ? $user->tableSchema->primaryKey : $user->primaryKey();
+		$userPk = $user->tableSchema->primaryKey;
 		$userPkType = $user->tableSchema->getColumn($userPk)->dbType;
-		$driver = $this->dbConnection->getDriverName();
+		$schema = $user->dbConnection->schema;
 
-		$this->createTable('{{nfy_channels}}', array(
-			'id'=>'pk',
-			'name'=>'varchar(128) not null',
-			'level'=>'varchar(128)',
-			'category'=>'varchar(128)',
-			'criteria_callback'=>'text',
-			'message_template'=>'text',
-		));
 		$this->createTable('{{nfy_messages}}', array(
-			'id'=>'pk',
-			'channel_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_messages}}_channel_id_fkey REFERENCES {{nfy_channels}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'logtime'=>'timestamp',
-			'message'=>'text',
+			'id'			=> 'pk',
+			'queue_name'	=> 'string NOT NULL',
+			'created_on'	=> 'timestamp NOT NULL',
+			'sender_id'		=> $userPkType.' REFERENCES '.$schema->quoteTableName($userTable).' ('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE',
+			'subscription_id' => 'integer REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
+			'status'		=> 'integer NOT NULL',
+			'timeout'		=> 'integer',
+			'locked_on'		=> 'timestamp',
+			'deleted_on'	=> 'timestamp',
+			'mimetype'		=> 'string NOT NULL DEFAULT \'text/plain\'',
+			'body'			=> 'text',
 		));
 		$this->createTable('{{nfy_subscriptions}}', array(
 			'id'=>'pk',
-			'channel_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_subscriptions}}_channel_id_fkey REFERENCES {{nfy_channels}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'user_id'=>$userPkType.' not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_subscriptions}}_user_id_fkey REFERENCES '.$userTable.'('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'push_transports'=>'text',
-			'registered_on' => 'timestamp',
+			'queue_name'=>'string NOT NULL',
+			'subscriber_id'=>$userPkType.' NOT NULL REFERENCES '.$schema->quoteTableName($userTable).' ('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE',
+			'created_on' => 'timestamp',
+			'is_deleted' => 'boolean NOT NULL DEFAULT 0',
 		));
-		$this->createTable('{{nfy_queues}}', array(
+		$this->createTable('{{nfy_subscription_categories}}', array(
 			'id'=>'pk',
-			'subscription_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_queues}}_subscription_id_fkey REFERENCES {{nfy_subscriptions}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'message_id'=>'integer not null'.($driver=='sqlite' ? ' CONSTRAINT {{nfy_queues}}_message_id_fkey REFERENCES {{nfy_messages}}(id) ON DELETE CASCADE ON UPDATE CASCADE' : ''),
-			'is_delivered'=>'boolean not null default '.($driver=='sqlite'?'0':'false'),
-			'delivered_on'=>'timestamp',
+			'subscription_id'=>'integer NOT NULL REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
+			'category'=>'string NOT NULL',
+			'is_exception'=>'boolean NOT NULL DEFAULT 0',
 		));
 
-		if ($this->dbConnection->getDriverName() != 'sqlite') {
-			$this->addForeignKey('{{nfy_messages}}_channel_id_fkey', '{{nfy_messages}}', 'channel_id', '{{nfy_channels}}', 'id', 'CASCADE', 'CASCADE');
-			$this->addForeignKey('{{nfy_subscriptions}}_channel_id_fkey', '{{nfy_subscriptions}}', 'channel_id', '{{nfy_channels}}', 'id', 'CASCADE', 'CASCADE');
-			$this->addForeignKey('{{nfy_subscriptions}}_user_id_fkey', '{{nfy_subscriptions}}', 'user_id', $userTable, $userPk, 'CASCADE', 'CASCADE');
-			$this->addForeignKey('{{nfy_queues}}_subscription_id_fkey', '{{nfy_queues}}', 'subscription_id', '{{nfy_subscriptions}}', 'id', 'CASCADE', 'CASCADE');
-			$this->addForeignKey('{{nfy_queues}}_message_id_fkey', '{{nfy_queues}}', 'message_id', '{{nfy_messages}}', 'id', 'CASCADE', 'CASCADE');
-		}
+		$this->createIndex('{{nfy_messages}}_queue_name_idx', '{{nfy_messages}}', 'queue_name');
+		$this->createIndex('{{nfy_messages}}_sender_id_idx', '{{nfy_messages}}', 'sender_id');
+		$this->createIndex('{{nfy_messages}}_status_idx', '{{nfy_messages}}', 'status');
+		$this->createIndex('{{nfy_messages}}_locked_on_idx', '{{nfy_messages}}', 'locked_on');
+		$this->createIndex('{{nfy_messages}}_subscription_id_idx', '{{nfy_messages}}', 'subscription_id');
 
-		$this->createIndex('{{nfy_messages}}_channel_id_idx', '{{nfy_messages}}', 'channel_id');
-		$this->createIndex('{{nfy_subscriptions}}_channel_id_idx', '{{nfy_subscriptions}}', 'channel_id');
-		$this->createIndex('{{nfy_subscriptions}}_user_id_idx', '{{nfy_subscriptions}}', 'user_id');
-		$this->createIndex('{{nfy_queues}}_subscription_id_idx', '{{nfy_queues}}', 'subscription_id');
-		$this->createIndex('{{nfy_queues}}_message_id_idx', '{{nfy_queues}}', 'message_id');
-		$this->createIndex('{{nfy_queues}}_is_delivered_idx', '{{nfy_queues}}', 'is_delivered');
+		$this->createIndex('{{nfy_subscriptions}}_queue_name_idx', '{{nfy_subscriptions}}', 'queue_name');
+		$this->createIndex('{{nfy_subscriptions}}_subscriber_id_idx', '{{nfy_subscriptions}}', 'subscriber_id');
+		$this->createIndex('{{nfy_subscriptions}}_queue_name_subscriber_id_idx', '{{nfy_subscriptions}}', 'queue_name,subscriber_id', true);
+		$this->createIndex('{{nfy_subscriptions}}_is_deleted_idx', '{{nfy_subscriptions}}', 'is_deleted');
+
+		$this->createIndex('{{nfy_subscription_categories}}_subscription_id_idx', '{{nfy_subscription_categories}}', 'subscription_id');
+		$this->createIndex('{{nfy_subscription_categories}}_subscription_id_category_idx', '{{nfy_subscription_categories}}', 'subscription_id,category', true);
 	}
 
 	public function safeDown()
 	{
-		$this->dropTable('{{nfy_queues}}');
+		$this->dropTable('{{nfy_subscription_categories}}');
 		$this->dropTable('{{nfy_subscriptions}}');
 		$this->dropTable('{{nfy_messages}}');
-		$this->dropTable('{{nfy_channels}}');
 	}
 }
 
