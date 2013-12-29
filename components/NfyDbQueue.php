@@ -14,7 +14,7 @@ class NfyDbQueue extends NfyQueue {
 	{
 		$message = new NfyMessage;
 		$message->setAttributes(array(
-			'queue_name'	=> $this->name,
+			'queue_id'		=> $this->id,
 			'timeout'		=> $this->timeout,
 			'sender_id'		=> Yii::app()->user->getId(),
 			'status'		=> NfyMessage::AVAILABLE,
@@ -151,7 +151,7 @@ class NfyDbQueue extends NfyQueue {
 		if ($subscription === null) {
 			$subscription = new NfySubscription;
 			$subscription->setAttributes(array(
-				'queue_name' => $this->name,
+				'queue_id' => $this->id,
 				'subscriber_id' => $subscriber_id,
 			));
 		} else {
@@ -247,5 +247,13 @@ class NfyDbQueue extends NfyQueue {
 			$trx->commit();
 		}
 		return $message_ids;
+	}
+
+	/**
+	 * @return array of NfySubscription
+	 */
+	public function getSubscriptions()
+	{
+		return NfySubscription::model()->current()->withQueue($this->name)->with(array('categories'))->findAll();
 	}
 }

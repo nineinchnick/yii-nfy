@@ -5,7 +5,7 @@
  *
  * The followings are the available columns in table '{{nfy_messages}}':
  * @property integer $id
- * @property integer $queue_name
+ * @property integer $queue_id
  * @property string $created_on
  * @property integer $sender_id
  * @property integer $subscription_id
@@ -50,7 +50,7 @@ class NfyMessage extends CActiveRecord
 	public function rules()
 	{
 		return array(
-			array('queue_name, sender_id, body', 'required', 'except'=>'search'),
+			array('queue_id, sender_id, body', 'required', 'except'=>'search'),
 			array('sender_id, subscription_id, timeout', 'numerical', 'integerOnly'=>true),
 			array('status', 'numerical', 'integerOnly'=>true, 'on'=>'search'),
 			array('mimetype', 'safe', 'on'=>'search'),
@@ -75,7 +75,7 @@ class NfyMessage extends CActiveRecord
 	{
 		return array(
 			'id' => 'ID',
-			'queue_name' => 'Queue Name',
+			'queue_id' => 'Queue ID',
 			'created_on' => 'Created On',
 			'sender_id' => 'Sender ID',
 			'subscription_id' => 'Subscription ID',
@@ -95,7 +95,7 @@ class NfyMessage extends CActiveRecord
 	public function search()
 	{
 		$criteria=new CDbCriteria;
-		$criteria->compare('queue_name', $this->queue_name, true);
+		$criteria->compare('queue_id', $this->queue_id, true);
 		$criteria->compare('sender_id', $this->sender_id);
 		$criteria->compare('subscription_id', $this->subscription_id);
 		$criteria->compare('status', $this->status);
@@ -173,13 +173,13 @@ class NfyMessage extends CActiveRecord
         return $this;
 	}
 
-	public function withQueue($queue_name)
+	public function withQueue($queue_id)
 	{
         $t = $this->getTableAlias(true);
 		$pk = $this->tableSchema->primaryKey;
         $this->getDbCriteria()->mergeWith(array(
-            'condition' => $t.'.queue_name=:queue_name',
-			'params' => array(':queue_name'=>$queue_name),
+            'condition' => $t.'.queue_id=:queue_id',
+			'params' => array(':queue_id'=>$queue_id),
 			'order' => "$t.$pk ASC",
         ));
         return $this;

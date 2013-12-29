@@ -7,6 +7,10 @@
 abstract class NfyQueue extends CApplicationComponent implements NfyQueueInterface
 {
 	/**
+	 * @var string $id Id of the queue, required. Should be set to the component id.
+	 */
+	public $id;
+	/**
 	 * @var string $name Human readable name of the queue, required.
 	 */
 	public $name;

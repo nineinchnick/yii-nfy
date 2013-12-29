@@ -19,6 +19,10 @@ class NfyModule extends CWebModule
 	 * @var integer how many times can messages be polled in a single action call
 	 */
 	public $maxPollCount = 30;
+	/**
+	 * @var array list of queue application components that will be displayed in the index action of the default controller.
+	 */
+	public $queues = array();
 
 	/**
 	 * @inheritdoc

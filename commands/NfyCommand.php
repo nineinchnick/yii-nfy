@@ -5,14 +5,11 @@ Yii::import('nfy.NfyModule');
 class NfyCommand extends CConsoleCommand
 {
     /**
-     * nfy.channel.create
-     * nfy.channel.update
-     * nfy.channel.delete
-     * nfy.channel.read
+     * nfy.queue.read
      *       |
-     *       \-nfy.channel.read.subscribed
-     * nfy.channel.subscribe
-     * nfy.channel.unsubscribe
+     *       \-nfy.queue.read.subscribed
+     * nfy.queue.subscribe
+     * nfy.queue.unsubscribe
      *
      * nfy.message.read
      *       |
@@ -23,15 +20,15 @@ class NfyCommand extends CConsoleCommand
      *       \-nfy.message.create.subscribed
      */
     public function getTemplateAuthItems() {
-        $bizRule = 'return !isset($params["channel"]) || $params["channel"]->isSubscribed;';
+        $bizRule = 'return !isset($params["queue"]) || $params["queue"]->isSubscribed($params["userId"]);';
         return array(
-            array('name'=> 'nfy.channel.create',            'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.channel.update',            'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.channel.delete',            'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.channel.read',              'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.channel.read.subscribed',   'bizRule' => $bizRule, 'child' => 'nfy.channel.read'),
-            array('name'=> 'nfy.channel.subscribe',         'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.channel.unsubscribe',       'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.create',            'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.update',            'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.delete',            'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.read',              'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.read.subscribed',   'bizRule' => $bizRule, 'child' => 'nfy.queue.read'),
+            array('name'=> 'nfy.queue.subscribe',         'bizRule' => null, 'child' => null),
+            array('name'=> 'nfy.queue.unsubscribe',       'bizRule' => null, 'child' => null),
             array('name'=> 'nfy.message.read',              'bizRule' => null, 'child' => null),
             array('name'=> 'nfy.message.create',            'bizRule' => null, 'child' => null),
             array('name'=> 'nfy.message.read.subscribed',   'bizRule' => $bizRule, 'child' => 'nfy.message.read'),
@@ -42,17 +39,14 @@ class NfyCommand extends CConsoleCommand
     public function getTemplateAuthItemDescriptions()
     {
         return array(
-            'nfy.channel.create'            => Yii::t('NfyModule.auth', 'Create channel'),
-            'nfy.channel.update'            => Yii::t('NfyModule.auth', 'Update any channel'),
-            'nfy.channel.delete'            => Yii::t('NfyModule.auth', 'Delete any channel'),
-            'nfy.channel.read'              => Yii::t('NfyModule.auth', 'Read any channel'),
-            'nfy.channel.read.subscribed'   => Yii::t('NfyModule.auth', 'Read subscribed channel'),
-            'nfy.channel.subscribe'         => Yii::t('NfyModule.auth', 'Subscribe to any channel'),
-            'nfy.channel.unsubscribe'       => Yii::t('NfyModule.auth', 'Unsubscribe from a channel'),
-            'nfy.message.read'              => Yii::t('NfyModule.auth', 'Read messages from any channel'),
-            'nfy.message.create'            => Yii::t('NfyModule.auth', 'Send messages to any channel'),
-            'nfy.message.read.subscribed'   => Yii::t('NfyModule.auth', 'Read messages from subscribed channel'),
-            'nfy.message.create.subscribed' => Yii::t('NfyModule.auth', 'Send messages to subscribed channel'),
+            'nfy.queue.read'              => Yii::t('NfyModule.auth', 'Read any queue'),
+            'nfy.queue.read.subscribed'   => Yii::t('NfyModule.auth', 'Read subscribed queue'),
+            'nfy.queue.subscribe'         => Yii::t('NfyModule.auth', 'Subscribe to any queue'),
+            'nfy.queue.unsubscribe'       => Yii::t('NfyModule.auth', 'Unsubscribe from a queue'),
+            'nfy.message.read'              => Yii::t('NfyModule.auth', 'Read messages from any queue'),
+            'nfy.message.create'            => Yii::t('NfyModule.auth', 'Send messages to any queue'),
+            'nfy.message.read.subscribed'   => Yii::t('NfyModule.auth', 'Read messages from subscribed queue'),
+            'nfy.message.create.subscribed' => Yii::t('NfyModule.auth', 'Send messages to subscribed queue'),
         );
     }
 

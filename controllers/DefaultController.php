@@ -16,9 +16,21 @@ class DefaultController extends Controller
         );
     }
     
+	/**
+	 * Displays a list of queues and their subscriptions.
+	 */
 	public function actionIndex()
 	{
-		$this->render('index');
+		/** @var CWebUser */
+		$user = Yii::app()->user;
+        $subscribedOnly = $user->checkAccess('nfy.channel.read.subscribed', array(), true, false);
+		$queues = array();
+		foreach($this->module->queues as $queueId) {
+			$queue = Yii::app()->getComponent($queueId);
+			if (!($queue instanceof NfyQueueInterface) || ($subscribedOnly && !$queue->isSubscribed($user->getId()))) continue;
+			$queues[$queueId] = $queue;
+		}
+		$this->render('index', array('queues'=>$queues, 'subscribedOnly' => $subscribedOnly));
 	}
 
 	/**

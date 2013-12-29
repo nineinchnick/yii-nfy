@@ -5,7 +5,8 @@
  *
  * The followings are the available columns in table '{{nfy_subscriptions}}':
  * @property integer $id
- * @property integer $queue_name
+ * @property integer $queue_id
+ * @property string $label
  * @property integer $subscriber_id
  * @property string $created_on
  * @property boolean $is_deleted
@@ -13,6 +14,7 @@
  * The followings are the available model relations:
  * @property NfyMessage[] $messages
  * @property Users $subscriber
+ * @property NfySubscriptionCategory[] $categories
  */
 class NfySubscription extends CActiveRecord
 {
@@ -40,9 +42,10 @@ class NfySubscription extends CActiveRecord
 	public function rules()
 	{
 		return array(
-			array('queue_name, subscriber_id', 'required', 'except'=>'search'),
+			array('queue_id, subscriber_id', 'required', 'except'=>'search'),
 			array('subscriber_id', 'numerical', 'integerOnly'=>true),
 			array('is_deleted', 'boolean'),
+			array('label', 'safe'),
 		);
 	}
 
@@ -54,6 +57,8 @@ class NfySubscription extends CActiveRecord
 		return array(
 			'messages' => array(self::HAS_MANY, 'NfyMessage', 'subscription_id'),
 			'subscriber' => array(self::BELONGS_TO, Yii::app()->getModule('nfy')->userClass, 'subscriber_id'),
+			'categories' => array(self::HAS_MANY, 'NfySubscriptionCategory', 'subscription_id'),
+			'messagesCount' => array(self::STAT, 'NfyMessage', 'subscription_id'),
 		);
 	}
 
@@ -64,7 +69,8 @@ class NfySubscription extends CActiveRecord
 	{
 		return array(
 			'id' => 'ID',
-			'queue_name' => 'Queue Name',
+			'queue_id' => 'Queue ID',
+			'label' => 'Label',
 			'subscriber_id' => 'Subscriber ID',
 			'created_on' => 'Created On',
 			'is_deleted' => 'Is Deleted',
@@ -79,7 +85,8 @@ class NfySubscription extends CActiveRecord
 	{
 		$criteria=new CDbCriteria;
 
-		$criteria->compare('queue_name',$this->queue_name,true);
+		$criteria->compare('queue_id',$this->queue_id,true);
+		$criteria->compare('label',$this->label,true);
 		$criteria->compare('subscriber_id',$this->subscriber_id);
 		$criteria->compare('is_deleted',$this->is_deleted);
 
@@ -104,12 +111,12 @@ class NfySubscription extends CActiveRecord
 		);
 	}
 
-	public function withQueue($queue_name)
+	public function withQueue($queue_id)
 	{
         $t = $this->getTableAlias(true);
         $this->getDbCriteria()->mergeWith(array(
-            'condition' => $t.'.queue_name=:queue_name',
-			'params' => array(':queue_name'=>$queue_name),
+            'condition' => $t.'.queue_id=:queue_id',
+			'params' => array(':queue_id'=>$queue_id),
         ));
         return $this;
 	}
