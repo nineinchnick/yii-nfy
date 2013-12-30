@@ -8,6 +8,7 @@
  * @property integer $queue_id
  * @property string $created_on
  * @property integer $sender_id
+ * @property integer $message_id
  * @property integer $subscription_id
  * @property integer $status
  * @property integer $timeout
@@ -17,6 +18,8 @@
  * @property string $body
  *
  * The followings are the available model relations:
+ * @property NfyMessage $mainMessage
+ * @property NfyMessage[] $subscriptionMessages
  * @property NfySubscription $subscription
  * @property Users $sender
  */
@@ -52,6 +55,7 @@ class NfyMessage extends CActiveRecord
 		return array(
 			array('queue_id, sender_id, body', 'required', 'except'=>'search'),
 			array('sender_id, subscription_id, timeout', 'numerical', 'integerOnly'=>true),
+			array('message_id, subscription_id, timeout', 'numerical', 'integerOnly'=>true, 'on'=>'search'),
 			array('status', 'numerical', 'integerOnly'=>true, 'on'=>'search'),
 			array('mimetype', 'safe', 'on'=>'search'),
 		);
@@ -63,8 +67,10 @@ class NfyMessage extends CActiveRecord
 	public function relations()
 	{
 		return array(
-			'subscription' => array(self::BELONGS_TO, 'NfySubscription', 'subscription_id'),
+			'mainMessage' => array(self::BELONGS_TO, 'NfyMessage', 'message_id'),
 			'sender' => array(self::BELONGS_TO, Yii::app()->getModule('nfy')->userClass, 'sender_id'),
+			'subscription' => array(self::BELONGS_TO, 'NfySubscription', 'subscription_id'),
+			'subscriptionMessages' => array(self::HAS_MANY, 'NfyMessage', 'message_id'),
 		);
 	}
 
@@ -78,6 +84,7 @@ class NfyMessage extends CActiveRecord
 			'queue_id' => 'Queue ID',
 			'created_on' => 'Created On',
 			'sender_id' => 'Sender ID',
+			'message_id' => 'Message ID',
 			'subscription_id' => 'Subscription ID',
 			'status' => 'Status',
 			'timeout' => 'Timeout',
@@ -97,6 +104,7 @@ class NfyMessage extends CActiveRecord
 		$criteria=new CDbCriteria;
 		$criteria->compare('queue_id', $this->queue_id, true);
 		$criteria->compare('sender_id', $this->sender_id);
+		$criteria->compare('message_id', $this->message_id);
 		$criteria->compare('subscription_id', $this->subscription_id);
 		$criteria->compare('status', $this->status);
 		$criteria->compare('timeout', $this->timeout);

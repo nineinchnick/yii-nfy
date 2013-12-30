@@ -16,6 +16,7 @@ class m130713_201034_notifications_install extends CDbMigration
 			'queue_id'		=> 'string NOT NULL',
 			'created_on'	=> 'timestamp NOT NULL',
 			'sender_id'		=> $userPkType.' REFERENCES '.$schema->quoteTableName($userTable).' ('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE',
+			'message_id'	=> 'integer',
 			'subscription_id' => 'integer REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
 			'status'		=> 'integer NOT NULL',
 			'timeout'		=> 'integer',
@@ -41,6 +42,7 @@ class m130713_201034_notifications_install extends CDbMigration
 
 		$this->createIndex('{{nfy_messages}}_queue_id_idx', '{{nfy_messages}}', 'queue_id');
 		$this->createIndex('{{nfy_messages}}_sender_id_idx', '{{nfy_messages}}', 'sender_id');
+		$this->createIndex('{{nfy_messages}}_message_id_idx', '{{nfy_messages}}', 'message_id');
 		$this->createIndex('{{nfy_messages}}_status_idx', '{{nfy_messages}}', 'status');
 		$this->createIndex('{{nfy_messages}}_locked_on_idx', '{{nfy_messages}}', 'locked_on');
 		$this->createIndex('{{nfy_messages}}_subscription_id_idx', '{{nfy_messages}}', 'subscription_id');

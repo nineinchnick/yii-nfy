@@ -86,10 +86,11 @@ interface NfyQueueInterface
 	 * Subscribes a recipient to this queue. If categories are specified,
 	 * only matching messages will be delivered.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
-	 * @param array $categories list of categories of messages (e.g. 'system.web') that should be delivered to this subscription
-	 * @param array $exceptions list of categories of messages (e.g. 'system.web') that should NOT be delivered to this subscription
+	 * @param string $label optional, human readable label to distinguish subscriptions of the same user
+	 * @param array $categories optional, list of categories of messages (e.g. 'system.web') that should be delivered to this subscription
+	 * @param array $exceptions optional, list of categories of messages (e.g. 'system.web') that should NOT be delivered to this subscription
 	 */
-	public function subscribe($subscriber_id, $categories=null, $exceptions=null);
+	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null);
 	/**
 	 * Unsubscribes a recipient from this queue.
 	 * @param mixed $subscriber_id the actual format depends on the implementation

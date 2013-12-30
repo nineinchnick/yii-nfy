@@ -11,8 +11,8 @@ class DefaultController extends Controller
     public function accessRules() {
         return array(
             array('allow', 'actions' => array('index'), 'users' => array('@'), 'roles' => array('nfy.queue.read')),
-            array('allow', 'actions' => array('messages'), 'users' => array('@')),
-            array('allow', 'actions' => array('poll'), 'users' => array('*')),
+            array('allow', 'actions' => array('messages', 'subscribe', 'unsubscribe'), 'users' => array('@')),
+            array('allow', 'actions' => array('poll'), 'users' => array('@')),
             array('deny', 'users' => array('*')),
         );
     }
@@ -35,6 +35,28 @@ class DefaultController extends Controller
 		$this->render('index', array('queues'=>$queues, 'subscribedOnly' => $subscribedOnly));
 	}
 
+	public function actionSubscribe($queue_id)
+	{
+        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.subscribe'));
+
+		$formModel = new SubscriptionForm('create');
+        if (isset($_POST['SubscriptionForm'])) {
+			$formModel->attributes=$_POST['SubscriptionForm'];
+			if($formModel->validate()) {
+				$queue->subscribe(Yii::app()->user->getId(), $formModel->label, $formModel->categories, $formModel->exceptions);
+				$this->redirect(array('index'));
+			}
+        }
+        $this->render('subscription', array('queue' => $queue, 'model' => $formModel));
+	}
+
+	public function actionUnsubscribe($queue_id)
+	{
+        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.unsubscribe'));
+		$queue->unsubscribe(Yii::app()->user->getId());
+		$this->redirect(array('index'));
+	}
+
 	/**
 	 * Displays messages in the specified queue.
 	 * @param string $queue_id
@@ -42,18 +64,7 @@ class DefaultController extends Controller
 	 */
 	public function actionMessages($queue_id, $subscriber_id=null)
 	{
-		/** @var CWebUser */
-		$user = Yii::app()->user;
-		/** @var NfyQueue */
-		$queue = Yii::app()->getComponent($queue_id);
-		if (!($queue instanceof NfyQueueInterface))
-            throw new CHttpException(404, Yii::t("NfyModule.app", 'Queue with given ID was not found.'));
-		$authItems = array(
-			'nfy.message.read' => $user->checkAccess('nfy.message.read', array('queue'=>$queue)),
-			'nfy.message.create' =>  $user->checkAccess('nfy.message.create', array('queue'=>$queue)),
-		);
-		if (!$authItems['nfy.message.read'] && !$authItems['nfy.message.create'])
-            throw new CHttpException(403, Yii::t('yii','You are not authorized to perform this action.'));
+        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
 
 		$formModel = new MessageForm('create');
         if ($authItems['nfy.message.create'] && isset($_POST['MessageForm'])) {
@@ -78,6 +89,27 @@ class DefaultController extends Controller
         $this->render('messages', array('queue' => $queue, 'dataProvider' => $dataProvider, 'model' => $formModel, 'authItems' => $authItems));
 	}
 
+    protected function loadQueue($id, $authItems=array())
+    {
+		/** @var CWebUser */
+		$user = Yii::app()->user;
+		/** @var NfyQueue */
+		$queue = Yii::app()->getComponent($id);
+		if (!($queue instanceof NfyQueueInterface))
+            throw new CHttpException(404, Yii::t("NfyModule.app", 'Queue with given ID was not found.'));
+        $assignedAuthItems = array();
+        $allowAccess = empty($authItems);
+        foreach($authItems as $authItem) {
+            $assignedAuthItems[$authItem] = $user->checkAccess($authItem, array('queue'=>$queue));
+            if ($assignedAuthItems[$authItem])
+                $allowAccess = true;
+        }
+        if (!$allowAccess) {
+            throw new CHttpException(403, Yii::t('yii','You are not authorized to perform this action.'));
+        }
+        return array($queue, $assignedAuthItems);
+    }
+
     protected function sendMessage($queue)
     {
         $model = new MessageForm('create');
@@ -97,16 +129,24 @@ class DefaultController extends Controller
 	 */
     public function actionPoll($id, $subscribed=true)
     {
+		$userId = Yii::app()->user->getId();
+		$queue = Yii::app()->getComponent($id);
+		if (!($queue instanceof NfyQueueInterface))
+			return array();
+		if (!Yii::app()->user->checkAccess('nfy.message.read', array('queue'=>$queue)))
+            throw new CHttpException(403, Yii::t('yii','You are not authorized to perform this action.'));
+
 		Yii::app()->session->close();
 
+
 		$data = array();
-		$data['messages'] = $this->getMessages($id, $subscribed);
+		$data['messages'] = $this->getMessages($queue, $subscribed ? $userId : null);
 
 		$pollFor = $this->getModule()->longPolling;
 		$maxPoll = $this->getModule()->maxPollCount;
 		if ($pollFor && $maxPoll && empty($data['messages'])) {
 			while(empty($data['messages']) && $maxPoll) {
-				$data['messages'] = $this->getMessages();
+				$data['messages'] = $this->getMessages($queue, $subscribed ? $userId : null);
 				usleep($pollFor * 1000);
 				$maxPoll--;
 			}
@@ -122,13 +162,9 @@ class DefaultController extends Controller
         }
 	}
 
-    protected function getMessages($id, $subscribed=true)
+    protected function getMessages($queue, $userId)
     {
-		$queue = Yii::app()->getComponent($id);
-		if (!($queue instanceof NfyQueueInterface))
-			return array();
-
-		$messages = $queue->receive($subscribed ? Yii::app()->user->getId() : null);
+		$messages = $queue->receive($userId);
 
         if (empty($messages)) {
             return array();

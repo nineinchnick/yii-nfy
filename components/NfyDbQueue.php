@@ -58,6 +58,7 @@ class NfyDbQueue extends NfyQueue {
 		foreach($subscriptions as $subscription) {
 			$subscriptionMessage = clone $queueMessage;
 			$subscriptionMessage->subscription_id = $subscription->id;
+			$subscriptionMessage->message_id = $queueMessage->id;
             if ($this->beforeSendSubscription($subscriptionMessage, $subscription->subscriber_id) !== true) {
                 continue;
             }
@@ -170,7 +171,7 @@ class NfyDbQueue extends NfyQueue {
 	/**
 	 * @inheritdoc
 	 */
-	public function subscribe($subscriber_id, $categories=null, $exceptions=null)
+	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null)
 	{
 		$trx = NfySubscription::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfySubscription::model()->getDbConnection()->beginTransaction();
         $subscription = NfySubscription::model()->withQueue($this->id)->withSubscriber($subscriber_id)->find();
@@ -179,6 +180,7 @@ class NfyDbQueue extends NfyQueue {
 			$subscription->setAttributes(array(
 				'queue_id' => $this->id,
 				'subscriber_id' => $subscriber_id,
+				'label' => $label,
 			));
 		} else {
 			$subscription->is_deleted = 0;
@@ -276,10 +278,12 @@ class NfyDbQueue extends NfyQueue {
 	}
 
 	/**
-	 * @return array of NfySubscription
+	 * @param mixed $subscriber_id
+	 * @return array|NfySubscription
 	 */
-	public function getSubscriptions()
+	public function getSubscriptions($subscriber_id=null)
 	{
-		return NfySubscription::model()->current()->withQueue($this->id)->with(array('categories'))->findAll();
+		NfySubscription::model()->current()->withQueue($this->id)->with(array('categories'));
+		return $subscriber_id===null ? NfySubscription::model()->findAll() : NfySubscription::model()->findByAttributes(array('subscriber_id'=>$subscriber_id));
 	}
 }
