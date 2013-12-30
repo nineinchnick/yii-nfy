@@ -46,13 +46,28 @@ interface NfyQueueInterface
 	 */
 	public function send($message, $category=null);
 	/**
-	 * Gets available messages from the queue.
+	 * Gets messages from the queue, but neither lockes or removes them.
+	 * Messages are sorted by date and time of creation.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
 	 * @param integer $limit if null, all available messages are fetched from the queue
-	 * @param integer $mode if the messages should be locked or deleted when fetching from the queue 
+	 * @param integer|array $status allows peeking at locked or removed messages (not yet permanently)
 	 * @return array of NfyMessage objects
 	 */
-	public function recv($subscriber_id=null, $limit=null, $mode=self::GET_LOCK);
+	public function peek($subscriber_id=null, $limit=null, $status=NfyMessage::AVAILABLE);
+	/**
+	 * Gets available messages from the queue and lockes them. Unless they are deleted, they will unlock after a specific amount of time.
+	 * @param mixed $subscriber_id the actual format depends on the implementation
+	 * @param integer $limit if null, all available messages are fetched from the queue
+	 * @return array of NfyMessage objects
+	 */
+	public function reserve($subscriber_id=null, $limit=null);
+	/**
+	 * Gets available messages from the queue and removes them from the queue.
+	 * @param mixed $subscriber_id the actual format depends on the implementation
+	 * @param integer $limit if null, all available messages are fetched from the queue
+	 * @return array of NfyMessage objects
+	 */
+	public function receive($subscriber_id=null, $limit=null);
 	/**
 	 * Deletes locked messages from the queue.
 	 * @param integer|array $message_id one or many message ids

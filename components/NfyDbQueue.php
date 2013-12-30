@@ -46,7 +46,7 @@ class NfyDbQueue extends NfyQueue {
 
 		$success = true;
 
-		$subscriptions = NfySubscription::model()->current()->withQueue($this->name)->matchingCategory($category)->findAll();
+		$subscriptions = NfySubscription::model()->current()->withQueue($this->id)->matchingCategory($category)->findAll();
         
         $trx = $queueMessage->getDbConnection()->getCurrentTransaction() !== null ? null : $queueMessage->getDbConnection()->beginTransaction();
         
@@ -88,19 +88,45 @@ class NfyDbQueue extends NfyQueue {
 	/**
 	 * @inheritdoc
 	 */
-	public function recv($subscriber_id=null, $limit=-1, $mode=self::GET_LOCK)
+	public function peek($subscriber_id=null, $limit=-1, $status=NfyMessage::AVAILABLE)
 	{
 		$pk = NfyMessage::model()->tableSchema->primaryKey;
-		$trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null || $mode === self::GET_PEEK ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
-		$messages = NfyMessage::model()->withQueue($this->name)->withSubscriber($subscriber_id)->available($this->timeout)->findAll(array('index'=>$pk, 'limit'=>$limit));
+		$messages = NfyMessage::model()->withQueue($this->id)->withSubscriber($subscriber_id)->withStatus($status, $this->timeout)->findAll(array('index'=>$pk, 'limit'=>$limit));
+		return $messages;
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function reserve($subscriber_id=null, $limit=null)
+	{
+		return $this->receiveInternal($subscriber_id, $limit, self::GET_LOCK);
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function receive($subscriber_id=null, $limit=null)
+	{
+		return $this->receiveInternal($subscriber_id, $limit, self::GET_DELETE);
+	}
+
+	/**
+	 * Perform message extraction.
+	 */
+	protected function receiveInternal($subscriber_id=null, $limit=-1, $mode=self::GET_LOCK)
+	{
+		$pk = NfyMessage::model()->tableSchema->primaryKey;
+		$trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
+		$messages = NfyMessage::model()->withQueue($this->id)->withSubscriber($subscriber_id)->available($this->timeout)->findAll(array('index'=>$pk, 'limit'=>$limit));
 		if (!empty($messages)) {
+			$now = new DateTime('now', new DateTimezone('UTC'));
 			if ($mode === self::GET_DELETE) {
-				$now = new DateTime('now', new DateTimezone('UTC'));
-				NfyMessage::model()->updateByPk(array_keys($messages), array('status'=>NfyMessage::DELETED, 'deleted_on'=>$now->format('Y-m-d H:i:s')));
+				$attributes = array('status'=>NfyMessage::DELETED, 'deleted_on'=>$now->format('Y-m-d H:i:s'));
 			} elseif ($mode === self::GET_LOCK) {
-				$now = new DateTime('now', new DateTimezone('UTC'));
-				NfyMessage::model()->updateByPk(array_keys($messages), array('status'=>NfyMessage::LOCKED, 'locked_on'=>$now->format('Y-m-d H:i:s')));
+				$attributes = array('status'=>NfyMessage::LOCKED, 'locked_on'=>$now->format('Y-m-d H:i:s'));
 			}
+			NfyMessage::model()->updateByPk(array_keys($messages), $attributes);
 		}
 		if ($trx !== null) {
 			$trx->commit();
@@ -115,7 +141,7 @@ class NfyDbQueue extends NfyQueue {
 	{
         $trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
 		$pk = NfyMessage::model()->tableSchema->primaryKey;
-		$messages = NfyMessage::model()->withQueue($this->name)->withSubscriber($subscriber_id)->locked($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
+		$messages = NfyMessage::model()->withQueue($this->id)->withSubscriber($subscriber_id)->locked($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
 		$message_ids = array_keys($messages);
 		$now = new DateTime('now', new DateTimezone('UTC'));
 		NfyMessage::model()->updateByPk($message_ids, array('status'=>NfyMessage::DELETED, 'deleted_on'=>$now->format('Y-m-d H:i:s')));
@@ -132,7 +158,7 @@ class NfyDbQueue extends NfyQueue {
 	{
         $trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
 		$pk = NfyMessage::model()->tableSchema->primaryKey;
-		$messages = NfyMessage::model()->withQueue($this->name)->withSubscriber($subscriber_id)->locked($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
+		$messages = NfyMessage::model()->withQueue($this->id)->withSubscriber($subscriber_id)->locked($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
 		$message_ids = array_keys($messages);
 		NfyMessage::model()->updateByPk($message_ids, array('status'=>NfyMessage::AVAILABLE));
 		if ($trx !== null) {
@@ -147,7 +173,7 @@ class NfyDbQueue extends NfyQueue {
 	public function subscribe($subscriber_id, $categories=null, $exceptions=null)
 	{
 		$trx = NfySubscription::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfySubscription::model()->getDbConnection()->beginTransaction();
-        $subscription = NfySubscription::model()->withQueue($this->name)->withSubscriber($subscriber_id)->find();
+        $subscription = NfySubscription::model()->withQueue($this->id)->withSubscriber($subscriber_id)->find();
 		if ($subscription === null) {
 			$subscription = new NfySubscription;
 			$subscription->setAttributes(array(
@@ -194,7 +220,7 @@ class NfyDbQueue extends NfyQueue {
 	public function unsubscribe($subscriber_id, $permanent=true)
 	{
 		$trx = NfySubscription::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfySubscription::model()->getDbConnection()->beginTransaction();
-        $subscription = NfySubscription::model()->withQueue($this->name)->withSubscriber($subscriber_id)->find();
+        $subscription = NfySubscription::model()->withQueue($this->id)->withSubscriber($subscriber_id)->find();
 		if ($subscription !== null) {
 			if ($permanent)
 				$subscription->delete();
@@ -211,7 +237,7 @@ class NfyDbQueue extends NfyQueue {
 	 */
 	public function isSubscribed($subscriber_id)
 	{
-        $subscription = NfySubscription::model()->current()->withQueue($this->name)->withSubscriber($subscriber_id)->find();
+        $subscription = NfySubscription::model()->current()->withQueue($this->id)->withSubscriber($subscriber_id)->find();
         return $subscription !== null;
 	}
 
@@ -223,7 +249,7 @@ class NfyDbQueue extends NfyQueue {
 	{
         $trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
 		$pk = NfyMessage::model()->tableSchema->primaryKey;
-		$messages = NfyMessage::model()->withQueue($this->name)->timedout($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
+		$messages = NfyMessage::model()->withQueue($this->id)->timedout($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
 		$message_ids = array_keys($messages);
 		NfyMessage::model()->updateByPk($message_ids, array('status'=>NfyMessage::AVAILABLE));
 		if ($trx !== null) {
@@ -240,7 +266,7 @@ class NfyDbQueue extends NfyQueue {
 	{
         $trx = NfyMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyMessage::model()->getDbConnection()->beginTransaction();
 		$pk = NfyMessage::model()->tableSchema->primaryKey;
-		$messages = NfyMessage::model()->withQueue($this->name)->deleted()->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
+		$messages = NfyMessage::model()->withQueue($this->id)->deleted()->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
 		$message_ids = array_keys($messages);
 		NfyMessage::model()->deleteByPk($message_ids);
 		if ($trx !== null) {
@@ -254,6 +280,6 @@ class NfyDbQueue extends NfyQueue {
 	 */
 	public function getSubscriptions()
 	{
-		return NfySubscription::model()->current()->withQueue($this->name)->with(array('categories'))->findAll();
+		return NfySubscription::model()->current()->withQueue($this->id)->with(array('categories'))->findAll();
 	}
 }

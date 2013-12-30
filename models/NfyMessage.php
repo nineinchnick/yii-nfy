@@ -133,28 +133,12 @@ class NfyMessage extends CActiveRecord
 
 	public function available($timeout=null)
 	{
-        $t = $this->getTableAlias(true);
-		$criteria = array('condition' => "($t.status=".self::AVAILABLE.")");
-		if ($timeout !== null) {
-			$now = new DateTime("-$timeout seconds", new DateTimezone('UTC'));
-			$criteria['condition'] .= " OR ($t.status=".self::LOCKED." AND $t.locked_on <= :timeout)";
-			$criteria['params'] = array(':timeout'=>$now->format('Y-m-d H:i:s'));
-		}
-        $this->getDbCriteria()->mergeWith($criteria);
-        return $this;
+		return $this->withStatus(self::AVAILABLE,$timeout);
 	}
 
 	public function locked($timeout=null)
 	{
-        $t = $this->getTableAlias(true);
-		$criteria = array('condition' => "($t.status=".self::LOCKED.")");
-		if ($timeout !== null) {
-			$now = new DateTime("-$timeout seconds", new DateTimezone('UTC'));
-			$criteria['condition'] .= " AND $t.locked_on > :timeout";
-			$criteria['params'] = array(':timeout'=>$now->format('Y-m-d H:i:s'));
-		}
-        $this->getDbCriteria()->mergeWith($criteria);
-        return $this;
+		return $this->withStatus(self::LOCKED,$timeout);
 	}
 
 	public function timedout($timeout=null)
@@ -170,6 +154,52 @@ class NfyMessage extends CActiveRecord
 			'params' => array(':timeout'=>$now->format('Y-m-d H:i:s')),
 		);
         $this->getDbCriteria()->mergeWith($criteria);
+        return $this;
+	}
+
+	public function withStatus($statuses, $timeout=null)
+	{
+		if (!is_array($statuses))
+			$statuses = array($statuses);
+        $t = $this->getTableAlias(true);
+		$now = new DateTime("-$timeout seconds", new DateTimezone('UTC'));
+		$criteria = new CDbCriteria;
+		$conditions = array();
+		// test for two special cases
+		if (array_diff($statuses, array(self::AVAILABLE, self::LOCKED)) === array()) {
+			// only not deleted
+			$conditions[] = "$t.status!=".self::DELETED;
+		} elseif (array_diff($statuses, array(self::AVAILABLE, self::LOCKED, self::DELETED)) === array()) {
+			// pass - don't add no conditions
+		} else {
+			// merge all statuses
+			foreach($statuses as $status) {
+				switch($status) {
+					case self::AVAILABLE:
+						$conditions[] = "$t.status=".$status;
+						if ($timeout !== null) {
+							$conditions[] = "($t.status=".self::LOCKED." AND $t.locked_on <= :timeout)";
+							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
+						}
+						break;
+					case self::LOCKED:
+						if ($timeout !== null) {
+							$conditions[] = "($t.status=$status AND $t.locked_on > :timeout)";
+							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
+						} else {
+							$conditions[] = "$t.status=".$status;
+						}
+						break;
+					case self::DELETED:
+						$conditions[] = "$t.status=".$status;
+						break;
+				}
+			}
+		}
+		if (!empty($conditions)) {
+			$criteria->addCondition('('.implode(') OR (', $conditions).')', 'OR');
+			$this->getDbCriteria()->mergeWith($criteria);
+		}
         return $this;
 	}
 

@@ -53,7 +53,7 @@ Then you can send and receive messages through this component:
 // send one message 'test'
 Yii::app()->queue->send('test');
 // receive all available messages without using subscriptions and immediately delete them from the queue
-$messages = $queue->recv();
+$messages = $queue->receive();
 ~~~
 
 Or you could subscribe some users to it:
@@ -63,7 +63,7 @@ Yii::app()->queue->subscribe(Yii:app()->user->getId());
 // send one message 'test'
 Yii::app()->queue->send('test');
 // receive all available messages for current user and immediately delete them from the queue
-$messages = $queue->recv(Yii:app()->user->getId());
+$messages = $queue->receive(Yii:app()->user->getId());
 // if there are any other users subscribed, they will receive the message independently
 ~~~
 

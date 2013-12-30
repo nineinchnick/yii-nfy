@@ -22,9 +22,6 @@ class NfyCommand extends CConsoleCommand
     public function getTemplateAuthItems() {
         $bizRule = 'return !isset($params["queue"]) || $params["queue"]->isSubscribed($params["userId"]);';
         return array(
-            array('name'=> 'nfy.queue.create',            'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.queue.update',            'bizRule' => null, 'child' => null),
-            array('name'=> 'nfy.queue.delete',            'bizRule' => null, 'child' => null),
             array('name'=> 'nfy.queue.read',              'bizRule' => null, 'child' => null),
             array('name'=> 'nfy.queue.read.subscribed',   'bizRule' => $bizRule, 'child' => 'nfy.queue.read'),
             array('name'=> 'nfy.queue.subscribe',         'bizRule' => null, 'child' => null),
