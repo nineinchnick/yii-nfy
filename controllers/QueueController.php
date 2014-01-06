@@ -14,7 +14,7 @@ class QueueController extends Controller
     public function accessRules() {
         return array(
             array('allow', 'actions' => array('index'), 'users' => array('@'), 'roles' => array('nfy.queue.read')),
-            array('allow', 'actions' => array('messages', 'subscribe', 'unsubscribe'), 'users' => array('@')),
+            array('allow', 'actions' => array('messages', 'message', 'subscribe', 'unsubscribe'), 'users' => array('@')),
             array('allow', 'actions' => array('poll'), 'users' => array('@')),
             array('deny', 'users' => array('*')),
         );
@@ -67,13 +67,16 @@ class QueueController extends Controller
 	}
 
 	/**
-	 * Displays messages in the specified queue.
+	 * Displays and send messages in the specified queue.
 	 * @param string $queue_id
 	 * @param string $subscriber_id
 	 */
 	public function actionMessages($queue_id, $subscriber_id=null)
 	{
+		if (($subscriber_id=trim($subscriber_id))==='')
+			$subscriber_id = null;
         list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
+		$this->verifySubscriber($queue, $subscriber_id);
 
 		$formModel = new MessageForm('create');
         if ($authItems['nfy.message.create'] && isset($_POST['MessageForm'])) {
@@ -90,10 +93,37 @@ class QueueController extends Controller
 				$queue->peek($subscriber_id, 200, array(NfyMessage::AVAILABLE, NfyMessage::RESERVED, NfyMessage::DELETED)),
 				array('sort'=>array('attributes'=>array('id'), 'defaultOrder' => array('id' => CSort::SORT_DESC)))
 			);
-            // reverse display order
+            // reverse display order to simulate a chat window, where latest message is right above the message form
             $dataProvider->setData(array_reverse($dataProvider->getData()));
         }
         $this->render('messages', array('queue' => $queue, 'dataProvider' => $dataProvider, 'model' => $formModel, 'authItems' => $authItems));
+	}
+
+	/**
+	 * Fetches details of a single message, allows to release or delete it or sends a new message.
+	 * @param string $queue_id
+	 * @param string $subscriber_id
+	 * @param string $message_id
+	 */
+	public function actionMessage($queue_id, $subscriber_id=null, $message_id=null)
+	{
+		if (($subscriber_id=trim($subscriber_id))==='')
+			$subscriber_id = null;
+        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
+		$this->verifySubscriber($queue, $subscriber_id);
+
+		NfyMessage::model()->withQueue($queue->id);
+		if ($subscriber_id !== null)
+			NfyMessage::model()->withSubscriber($subscriber_id);
+
+		$message = NfyMessage::model()->findByPk($message_id);
+
+		if (isset($_POST['delete'])) {
+			$queue->delete($message->id, $message->subscription_id);
+			$this->redirect(array('messages', 'queue_id'=> $message->queue_id, 'subscriber_id'=>$message->subscription_id));
+		}
+
+		$this->render('message', array('queue' => $queue, 'message' => $message, 'authItems' => $authItems));
 	}
 
 	/**
@@ -101,6 +131,7 @@ class QueueController extends Controller
 	 * @param string $id queue component id
 	 * @param array $authItems
 	 * @return array NfyQueueInterface object and array with authItems as keys and boolean values
+	 * @throws CHttpException 403 or 404
 	 */
     protected function loadQueue($id, $authItems=array())
     {
@@ -124,8 +155,24 @@ class QueueController extends Controller
     }
 
 	/**
+	 * Checks if current user can read only messages from subscribed queues and is subscribed.
+	 * @param NfyQueueInterface $queue
+	 * @param integer $subscriber_id
+	 * @throws CHttpException 403
+	 */
+	protected function verifySubscriber($queue, $subscriber_id)
+	{
+		/** @var CWebUser */
+		$user = Yii::app()->user;
+        $subscribedOnly = $user->checkAccess('nfy.message.read.subscribed', array(), true, false);
+		if ($subscribedOnly && (!$queue->isSubscribed($user->getId()) || $subscriber_id != $user->getId()))
+            throw new CHttpException(403, Yii::t('yii','You are not authorized to perform this action.'));
+	}
+
+	/**
 	 * @param string $id id of the queue component
 	 * @param boolean $subscribed should the queue be checked using current user's subscription
+	 * @throws CHttpException 403
 	 */
     public function actionPoll($id, $subscribed=true)
     {

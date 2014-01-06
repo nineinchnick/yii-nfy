@@ -1,5 +1,5 @@
 <?php
-/* @var $this DefaultController */
+/* @var $this QueueController */
 /* @var $dataProvider CArrayDataProvider */
 /* @var $queue NfyQueueInterface */
 /* @var $model MessageForm */
