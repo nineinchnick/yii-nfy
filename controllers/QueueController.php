@@ -1,6 +1,9 @@
 <?php
 
-class DefaultController extends Controller
+/**
+ * The default controller providing a basic queue managment interface and poll action.
+ */
+class QueueController extends Controller
 {
     public function filters() {
         return array(
@@ -35,6 +38,9 @@ class DefaultController extends Controller
 		$this->render('index', array('queues'=>$queues, 'subscribedOnly' => $subscribedOnly));
 	}
 
+	/**
+	 * Subscribe current user to selected queue.
+	 */
 	public function actionSubscribe($queue_id)
 	{
         list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.subscribe'));
@@ -50,6 +56,9 @@ class DefaultController extends Controller
         $this->render('subscription', array('queue' => $queue, 'model' => $formModel));
 	}
 
+	/**
+	 * Unsubscribe current user from selected queue.
+	 */
 	public function actionUnsubscribe($queue_id)
 	{
         list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.unsubscribe'));
@@ -70,9 +79,7 @@ class DefaultController extends Controller
         if ($authItems['nfy.message.create'] && isset($_POST['MessageForm'])) {
 			$formModel->attributes=$_POST['MessageForm'];
 			if($formModel->validate()) {
-				//! @todo use first selected category for current subscription - if there's only one the list should be hidden from user
-				//$queue->getSubscription()->categories(array('limit'=>1,'condition'=>'exception=0'))
-				$queue->send($formModel->content);
+				$queue->send($formModel->content, $formModel->category);
 				$this->redirect(array('messages', 'queue_id'=>$queue_id, 'subscriber_id'=>$subscriber_id));
 			}
         }
@@ -80,7 +87,7 @@ class DefaultController extends Controller
         $dataProvider = null;
         if ($authItems['nfy.message.read']) {
 			$dataProvider = new CArrayDataProvider(
-				$queue->peek($subscriber_id, 200, array(NfyMessage::AVAILABLE, NfyMessage::LOCKED, NfyMessage::DELETED)),
+				$queue->peek($subscriber_id, 200, array(NfyMessage::AVAILABLE, NfyMessage::RESERVED, NfyMessage::DELETED)),
 				array('sort'=>array('attributes'=>array('id'), 'defaultOrder' => array('id' => CSort::SORT_DESC)))
 			);
             // reverse display order
@@ -89,6 +96,12 @@ class DefaultController extends Controller
         $this->render('messages', array('queue' => $queue, 'dataProvider' => $dataProvider, 'model' => $formModel, 'authItems' => $authItems));
 	}
 
+	/**
+	 * Loads queue specified by id and checks authorization.
+	 * @param string $id queue component id
+	 * @param array $authItems
+	 * @return array NfyQueueInterface object and array with authItems as keys and boolean values
+	 */
     protected function loadQueue($id, $authItems=array())
     {
 		/** @var CWebUser */
@@ -108,19 +121,6 @@ class DefaultController extends Controller
             throw new CHttpException(403, Yii::t('yii','You are not authorized to perform this action.'));
         }
         return array($queue, $assignedAuthItems);
-    }
-
-    protected function sendMessage($queue)
-    {
-        $model = new MessageForm('create');
-        
-        if(isset($_POST['MessageForm'])) {
-            $model->attributes=$_POST['MessageForm'];
-            if($model->validate()) {
-                $queue->send($model->content);
-            }
-        }
-        return $model;
     }
 
 	/**
@@ -162,6 +162,16 @@ class DefaultController extends Controller
         }
 	}
 
+	/**
+	 * Fetches messages from a queue and deletes them. Messages are transformed into a json serializable array.
+	 * If a sound is configured in the module, an url is added to each message.
+	 *
+	 * Only first 20 messages are returned but all available messages are deleted from the queue.
+	 *
+	 * @param NfyQueueInterface $queue
+	 * @param string $userId
+	 * @return array
+	 */
     protected function getMessages($queue, $userId)
     {
 		$messages = $queue->receive($userId);

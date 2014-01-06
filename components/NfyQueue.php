@@ -15,8 +15,8 @@ abstract class NfyQueue extends CApplicationComponent implements NfyQueueInterfa
 	 */
 	public $name;
 	/**
-	 * @var integer $timeout Number of seconds after which a locked message is considered timed out and available again.
-	 * If null, locked messages never time out.
+	 * @var integer $timeout Number of seconds after which a reserved message is considered timed out and available again.
+	 * If null, reserved messages never time out.
 	 */
 	public $timeout;
 

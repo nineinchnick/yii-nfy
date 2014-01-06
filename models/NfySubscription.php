@@ -131,9 +131,30 @@ class NfySubscription extends CActiveRecord
         return $this;
 	}
 
-	public function matchingCategory($category)
+	public function matchingCategory($categories)
 	{
-		//! @todo add a join to categories without select and a distinct flag
+        if ($categories===null)
+            return $this;
+        $t = $this->getTableAlias(true);
+		$r = $this->dbConnection->schema->quoteTableName('categories');
+
+        if (!is_array($categories))
+            $categories = array($categories);
+
+        $criteria = new CDbCriteria;
+		$criteria->with = array('categories'=>array(
+			'together'=>true,
+			'select'=>null,
+			'distinct'=>true,
+		));
+
+        $i = 0;
+        foreach($categories as $category) {
+			$criteria->addCondition("($r.is_exception = 0 AND :category$i LIKE $r.category) OR ($r.is_exception = 1 AND :category$i NOT LIKE $r.category)");
+			$criteria->params[':category'.$i++] = $category;
+        }
+        
+        $this->getDbCriteria()->mergeWith($criteria);
         return $this;
 	}
 }

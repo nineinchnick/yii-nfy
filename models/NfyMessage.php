@@ -12,7 +12,7 @@
  * @property integer $subscription_id
  * @property integer $status
  * @property integer $timeout
- * @property string $locked_on
+ * @property string $reserved_on
  * @property string $deleted_on
  * @property string $mimetype
  * @property string $body
@@ -26,7 +26,7 @@
 class NfyMessage extends CActiveRecord
 {
 	const AVAILABLE = 0;
-	const LOCKED = 1;
+	const RESERVED = 1;
 	const DELETED = 2;
 
 	/**
@@ -88,7 +88,7 @@ class NfyMessage extends CActiveRecord
 			'subscription_id' => 'Subscription ID',
 			'status' => 'Status',
 			'timeout' => 'Timeout',
-			'locked_on' => 'Locked On',
+			'reserved_on' => 'Reserved On',
 			'deleted_on' => 'Deleted On',
 			'mimetype' => 'MIME Type',
 			'body' => 'Message Body',
@@ -144,9 +144,9 @@ class NfyMessage extends CActiveRecord
 		return $this->withStatus(self::AVAILABLE,$timeout);
 	}
 
-	public function locked($timeout=null)
+	public function reserved($timeout=null)
 	{
-		return $this->withStatus(self::LOCKED,$timeout);
+		return $this->withStatus(self::RESERVED,$timeout);
 	}
 
 	public function timedout($timeout=null)
@@ -158,7 +158,7 @@ class NfyMessage extends CActiveRecord
 		$now = new DateTime("-$timeout seconds", new DateTimezone('UTC'));
         $t = $this->getTableAlias(true);
 		$criteria = array(
-			'condition' => "($t.status=".self::LOCKED." AND $t.locked_on <= :timeout)",
+			'condition' => "($t.status=".self::RESERVED." AND $t.reserved_on <= :timeout)",
 			'params' => array(':timeout'=>$now->format('Y-m-d H:i:s')),
 		);
         $this->getDbCriteria()->mergeWith($criteria);
@@ -174,10 +174,10 @@ class NfyMessage extends CActiveRecord
 		$criteria = new CDbCriteria;
 		$conditions = array();
 		// test for two special cases
-		if (array_diff($statuses, array(self::AVAILABLE, self::LOCKED)) === array()) {
+		if (array_diff($statuses, array(self::AVAILABLE, self::RESERVED)) === array()) {
 			// only not deleted
 			$conditions[] = "$t.status!=".self::DELETED;
-		} elseif (array_diff($statuses, array(self::AVAILABLE, self::LOCKED, self::DELETED)) === array()) {
+		} elseif (array_diff($statuses, array(self::AVAILABLE, self::RESERVED, self::DELETED)) === array()) {
 			// pass - don't add no conditions
 		} else {
 			// merge all statuses
@@ -186,13 +186,13 @@ class NfyMessage extends CActiveRecord
 					case self::AVAILABLE:
 						$conditions[] = "$t.status=".$status;
 						if ($timeout !== null) {
-							$conditions[] = "($t.status=".self::LOCKED." AND $t.locked_on <= :timeout)";
+							$conditions[] = "($t.status=".self::RESERVED." AND $t.reserved_on <= :timeout)";
 							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
 						}
 						break;
-					case self::LOCKED:
+					case self::RESERVED:
 						if ($timeout !== null) {
-							$conditions[] = "($t.status=$status AND $t.locked_on > :timeout)";
+							$conditions[] = "($t.status=$status AND $t.reserved_on > :timeout)";
 							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
 						} else {
 							$conditions[] = "$t.status=".$status;

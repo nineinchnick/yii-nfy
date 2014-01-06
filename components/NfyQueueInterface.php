@@ -3,7 +3,7 @@
 interface NfyQueueInterface
 {
 	const GET_PEEK = 0;
-	const GET_LOCK = 1;
+	const GET_RESERVE = 1;
 	const GET_DELETE = 2;
 
 	/**
@@ -46,16 +46,16 @@ interface NfyQueueInterface
 	 */
 	public function send($message, $category=null);
 	/**
-	 * Gets messages from the queue, but neither lockes or removes them.
+	 * Gets messages from the queue, but neither reserves or removes them.
 	 * Messages are sorted by date and time of creation.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
 	 * @param integer $limit if null, all available messages are fetched from the queue
-	 * @param integer|array $status allows peeking at locked or removed messages (not yet permanently)
+	 * @param integer|array $status allows peeking at reserved or removed messages (not yet permanently)
 	 * @return array of NfyMessage objects
 	 */
 	public function peek($subscriber_id=null, $limit=null, $status=NfyMessage::AVAILABLE);
 	/**
-	 * Gets available messages from the queue and lockes them. Unless they are deleted, they will unlock after a specific amount of time.
+	 * Gets available messages from the queue and reserves them. Unless they are deleted, they will be released after a specific amount of time.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
 	 * @param integer $limit if null, all available messages are fetched from the queue
 	 * @return array of NfyMessage objects
@@ -69,22 +69,22 @@ interface NfyQueueInterface
 	 */
 	public function receive($subscriber_id=null, $limit=null);
 	/**
-	 * Deletes locked messages from the queue.
+	 * Deletes reserved messages from the queue.
 	 * @param integer|array $message_id one or many message ids
 	 * @param mixed $subscriber_id if not null, only this subscriber's messages will be affected, the actual format depends on the implementation
-	 * @return integer|array one or more ids of deleted message, some could have timed out and had been unlocked automatically
+	 * @return integer|array one or more ids of deleted message, some could have timed out and had been released automatically
 	 */
 	public function delete($message_id, $subscriber_id=null);
 	/**
-	 * Unlocks locked messages.
+	 * Releases reserved messages.
 	 * @param integer|array $message_id one or many message ids
 	 * @param mixed $subscriber_id if not null, only this subscriber's messages will be affected, the actual format depends on the implementation
-	 * @return integer|array one or more ids of unlocked message, some could have timed out and had been unlocked automatically
+	 * @return integer|array one or more ids of released message, some could have timed out and had been released automatically
 	 */
-	public function unlock($message_id, $subscriber_id=null);
+	public function release($message_id, $subscriber_id=null);
 	/**
-	 * Subscribes a recipient to this queue. If categories are specified,
-	 * only matching messages will be delivered.
+	 * Subscribes a recipient to this queue. If categories are specified, only matching messages will be delivered.
+	 * Categories can end with an wildcard (asterisk).
 	 * @param mixed $subscriber_id the actual format depends on the implementation
 	 * @param string $label optional, human readable label to distinguish subscriptions of the same user
 	 * @param array $categories optional, list of categories of messages (e.g. 'system.web') that should be delivered to this subscription

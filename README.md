@@ -206,7 +206,7 @@ __Warning!__ This version breaks backward compatibility. All database tables mus
 
 * Major refactoring to provide a generic queue component with improved interface.
 * Rerwritten message filtering and subscription delivery.
-* Support for locking messages with a timeout.
+* Support for reserving messages with a timeout.
 * Basic CRUD to manage/debug queues or use as a simple messanger interface.
 
 ### 0.6.5 - 2013-08-20

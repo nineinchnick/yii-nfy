@@ -2,6 +2,7 @@
 
 class NfyModule extends CWebModule
 {
+	public $defaultController = 'queue';
 	/**
 	 * @var string Name of user model class.
 	 */
