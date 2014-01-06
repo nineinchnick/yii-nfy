@@ -163,34 +163,6 @@ The drawback is that when the page is refreshed it temporarily disconnects from 
 
 The example mostly shows how to use web sockets and a different delivery method than Nfy::log().
 
-## Usage scenarios
-
-### Delivering messages
-
-Remember, that when a message is being published that process should be fast and shouldn't distrupt the normal HTTP request. If it requires contacting a remote host, it is prefferable to deliver a message to a local queue or service and let some other process handle it further.
-
-#### Simple database queue
-
-Implementing queues in a RDBMS could be considered an anti-pattern but if its for a low volume traffic it's an acceptable solution because it doesn't require any external components or services.
-
-#### Emailing
-
-By using the NfyDbQueue class, NfyQueue could be extended to send emails instead of writing data to a sql database.
-
-#### Message queue
-
-By using an external service, like a message queue server
-
-* Publish a message
-* The service takes care of delivering it to recipients who subscribed to a specific channel
-
-#### Proxy
-
-When using slow and/or unreliable transports, like sending to a remove host that could be offline, to avoid interrupting the processing of a normal HTTP request you could do the following:
-
-* Publish the message to either the database or message queue
-* Have another process in the background read from the queue and deliver it further
-
 ### Receiving messages
 
 By configuring the WebNotifications widget messages could be read by:
@@ -240,10 +212,4 @@ Other changes:
 ### 0.3 - 2013-07-13
 
 * Initial release
-
-## Todo
-
-* Create a CRUD to manage channels and subscriptions and implement restrictions which channels are available for users to subscribe to.
-* Provide a behavior similar to audit trail extension to plug in CActiveRecord
-* Add two more transports to the NfyDbRoute: XMPP (jabber) and SMTP (email)
 
