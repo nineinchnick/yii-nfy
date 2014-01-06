@@ -1,6 +1,6 @@
 <?php
 /* @var $data NfyQueue */
-/* @var $subscriptions array */
+/* @var $subscriptions NfyDbSubscription[] */
 $subscriptions = $data->getSubscriptions();
 ?>
 

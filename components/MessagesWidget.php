@@ -24,16 +24,24 @@ class MessagesWidget extends CWidget
 		
 		$cnt = 0;
 		$extraCss = '';
+
+		Yii::import('nfy.controllers.QueueController');
+		if ($this->owner instanceof QueueController) {
+			$queueController = $this->owner;
+		} else {
+			$queueController = new QueueController('queue', Yii::app()->getModule('nfy'));
+		}
 		
 		foreach($this->messages as $message) {
 			$text = addcslashes($message->body, "'\r\n");
-			$detailsUrl = $this->owner->createUrl('/nfy/message/view', array('id' => $message->id));
+			$detailsUrl = $queueController->createMessageUrl($message);
 			
 			$extraCss = (++$cnt % 2) === 0 ? 'even' : 'odd';
 			$elements .= "<div class=\"messagePopoverItem {$extraCss}\" onclick=\"window.location=\\'{$detailsUrl}\\'; return false;\">{$text}</div>";
 		}
 		
 		$label = Yii::t('NfyModule.app', 'Mark all as read');
+		//! @todo fix this
 		$deleteUrl = $this->owner->createUrl('/nfy/message/mark');
 		$widgetId = $this->getId();
 		

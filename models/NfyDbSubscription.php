@@ -12,16 +12,16 @@
  * @property boolean $is_deleted
  *
  * The followings are the available model relations:
- * @property NfyMessage[] $messages
+ * @property NfyDbMessage[] $messages
  * @property Users $subscriber
- * @property NfySubscriptionCategory[] $categories
+ * @property NfyDbSubscriptionCategory[] $categories
  */
-class NfySubscription extends CActiveRecord
+class NfyDbSubscription extends CActiveRecord
 {
 	/**
 	 * Returns the static model of the specified AR class.
 	 * @param string $className active record class name.
-	 * @return NfySubscription the static model class
+	 * @return NfyDbSubscription the static model class
 	 */
 	public static function model($className=__CLASS__)
 	{
@@ -55,10 +55,10 @@ class NfySubscription extends CActiveRecord
 	public function relations()
 	{
 		return array(
-			'messages' => array(self::HAS_MANY, 'NfyMessage', 'subscription_id'),
+			'messages' => array(self::HAS_MANY, 'NfyDbMessage', 'subscription_id'),
 			'subscriber' => array(self::BELONGS_TO, Yii::app()->getModule('nfy')->userClass, 'subscriber_id'),
-			'categories' => array(self::HAS_MANY, 'NfySubscriptionCategory', 'subscription_id'),
-			'messagesCount' => array(self::STAT, 'NfyMessage', 'subscription_id'),
+			'categories' => array(self::HAS_MANY, 'NfyDbSubscriptionCategory', 'subscription_id'),
+			'messagesCount' => array(self::STAT, 'NfyDbMessage', 'subscription_id'),
 		);
 	}
 

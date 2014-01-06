@@ -18,21 +18,17 @@
  * @property string $body
  *
  * The followings are the available model relations:
- * @property NfyMessage $mainMessage
- * @property NfyMessage[] $subscriptionMessages
- * @property NfySubscription $subscription
+ * @property NfyDbMessage $mainMessage
+ * @property NfyDbMessage[] $subscriptionMessages
+ * @property NfyDbSubscription $subscription
  * @property Users $sender
  */
-class NfyMessage extends CActiveRecord
+class NfyDbMessage extends CActiveRecord
 {
-	const AVAILABLE = 0;
-	const RESERVED = 1;
-	const DELETED = 2;
-
 	/**
 	 * Returns the static model of the specified AR class.
 	 * @param string $className active record class name.
-	 * @return NfyMessage the static model class
+	 * @return NfyDbMessage the static model class
 	 */
 	public static function model($className=__CLASS__)
 	{
@@ -67,10 +63,10 @@ class NfyMessage extends CActiveRecord
 	public function relations()
 	{
 		return array(
-			'mainMessage' => array(self::BELONGS_TO, 'NfyMessage', 'message_id'),
+			'mainMessage' => array(self::BELONGS_TO, 'NfyDbMessage', 'message_id'),
 			'sender' => array(self::BELONGS_TO, Yii::app()->getModule('nfy')->userClass, 'sender_id'),
-			'subscription' => array(self::BELONGS_TO, 'NfySubscription', 'subscription_id'),
-			'subscriptionMessages' => array(self::HAS_MANY, 'NfyMessage', 'message_id'),
+			'subscription' => array(self::BELONGS_TO, 'NfyDbSubscription', 'subscription_id'),
+			'subscriptionMessages' => array(self::HAS_MANY, 'NfyDbMessage', 'message_id'),
 		);
 	}
 
@@ -135,18 +131,18 @@ class NfyMessage extends CActiveRecord
 	{
         $t = $this->getTableAlias(true);
 		return array(
-			'deleted' => array('condition'=>"$t.status=".self::DELETED),
+			'deleted' => array('condition'=>"$t.status=".NfyMessage::DELETED),
 		);
 	}
 
 	public function available($timeout=null)
 	{
-		return $this->withStatus(self::AVAILABLE,$timeout);
+		return $this->withStatus(NfyMessage::AVAILABLE,$timeout);
 	}
 
 	public function reserved($timeout=null)
 	{
-		return $this->withStatus(self::RESERVED,$timeout);
+		return $this->withStatus(NfyMessage::RESERVED,$timeout);
 	}
 
 	public function timedout($timeout=null)
@@ -158,7 +154,7 @@ class NfyMessage extends CActiveRecord
 		$now = new DateTime("-$timeout seconds", new DateTimezone('UTC'));
         $t = $this->getTableAlias(true);
 		$criteria = array(
-			'condition' => "($t.status=".self::RESERVED." AND $t.reserved_on <= :timeout)",
+			'condition' => "($t.status=".NfyMessage::RESERVED." AND $t.reserved_on <= :timeout)",
 			'params' => array(':timeout'=>$now->format('Y-m-d H:i:s')),
 		);
         $this->getDbCriteria()->mergeWith($criteria);
@@ -174,23 +170,23 @@ class NfyMessage extends CActiveRecord
 		$criteria = new CDbCriteria;
 		$conditions = array();
 		// test for two special cases
-		if (array_diff($statuses, array(self::AVAILABLE, self::RESERVED)) === array()) {
+		if (array_diff($statuses, array(NfyMessage::AVAILABLE, NfyMessage::RESERVED)) === array()) {
 			// only not deleted
-			$conditions[] = "$t.status!=".self::DELETED;
-		} elseif (array_diff($statuses, array(self::AVAILABLE, self::RESERVED, self::DELETED)) === array()) {
+			$conditions[] = "$t.status!=".NfyMessage::DELETED;
+		} elseif (array_diff($statuses, array(NfyMessage::AVAILABLE, NfyMessage::RESERVED, NfyMessage::DELETED)) === array()) {
 			// pass - don't add no conditions
 		} else {
 			// merge all statuses
 			foreach($statuses as $status) {
 				switch($status) {
-					case self::AVAILABLE:
+					case NfyMessage::AVAILABLE:
 						$conditions[] = "$t.status=".$status;
 						if ($timeout !== null) {
-							$conditions[] = "($t.status=".self::RESERVED." AND $t.reserved_on <= :timeout)";
+							$conditions[] = "($t.status=".NfyMessage::RESERVED." AND $t.reserved_on <= :timeout)";
 							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
 						}
 						break;
-					case self::RESERVED:
+					case NfyMessage::RESERVED:
 						if ($timeout !== null) {
 							$conditions[] = "($t.status=$status AND $t.reserved_on > :timeout)";
 							$criteria->params = array(':timeout'=>$now->format('Y-m-d H:i:s'));
@@ -198,7 +194,7 @@ class NfyMessage extends CActiveRecord
 							$conditions[] = "$t.status=".$status;
 						}
 						break;
-					case self::DELETED:
+					case NfyMessage::DELETED:
 						$conditions[] = "$t.status=".$status;
 						break;
 				}
@@ -240,5 +236,22 @@ class NfyMessage extends CActiveRecord
 		}
         $this->getDbCriteria()->mergeWith($criteria);
         return $this;
+	}
+
+	public static function createMessages($dbMessages)
+	{
+		if (!is_array($dbMessages)) {
+			$dbMessages = array($dbMessages);
+		}
+		$result = array();
+		foreach($dbMessages as $dbMessage) {
+			$attributes = $dbMessage->getAttributes();
+			$attributes['subscriber_id'] = $dbMessage->subscription_id === null ? null : $dbMessage->subscription->subscriber_id;
+			unset($attributes['subscription_id']);
+			$message = new NfyMessage;
+			$message->setAttributes($attributes);
+			$result[] = $message;
+		}
+		return $result;
 	}
 }

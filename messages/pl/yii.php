@@ -17,12 +17,5 @@
  * NOTE, this file must be saved in UTF-8 encoding.
  */
 return array (
-  'Unsubscribe from a queue' => 'Wypisz się z kolejki',
-  'Read any queue' => 'Czytaj dowolną kolejkę',
-  'Read messages from any queue' => 'Czytaj wiadomości z dowolnej kolejki',
-  'Read messages from subscribed queue' => 'Czytaj wiadomości z subskrybowanych kolejek',
-  'Read subscribed queue' => 'Czytaj subskrybowaną kolejkę',
-  'Send messages to any queue' => 'Wysyłaj wiadomości do dowolnej kolejki',
-  'Send messages to subscribed queue' => 'Wysyłaj wiadomości do subskrybowanych kolejek',
-  'Subscribe to any queue' => 'Zapisz się do dowolnej kolejki',
+  'You are not authorized to perform this action.' => '',
 );

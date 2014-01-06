@@ -10,14 +10,14 @@
  * @property boolean $is_exception
  *
  * The followings are the available model relations:
- * @property NfySubscription $subscription
+ * @property NfyDbSubscription $subscription
  */
-class NfySubscriptionCategory extends CActiveRecord
+class NfyDbSubscriptionCategory extends CActiveRecord
 {
 	/**
 	 * Returns the static model of the specified AR class.
 	 * @param string $className active record class name.
-	 * @return NfySubscriptionCategory the static model class
+	 * @return NfyDbSubscriptionCategory the static model class
 	 */
 	public static function model($className=__CLASS__)
 	{
@@ -50,7 +50,7 @@ class NfySubscriptionCategory extends CActiveRecord
 	public function relations()
 	{
 		return array(
-			'subscription' => array(self::BELONGS_TO, 'NfySubscription', 'subscription_id'),
+			'subscription' => array(self::BELONGS_TO, 'NfyDbSubscription', 'subscription_id'),
 		);
 	}
 

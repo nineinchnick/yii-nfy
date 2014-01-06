@@ -112,18 +112,23 @@ class QueueController extends Controller
         list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
 		$this->verifySubscriber($queue, $subscriber_id);
 
-		NfyMessage::model()->withQueue($queue->id);
+		//! @todo replace with a method from NfyMessage
+		NfyDbMessage::model()->withQueue($queue->id);
 		if ($subscriber_id !== null)
-			NfyMessage::model()->withSubscriber($subscriber_id);
+			NfyDbMessage::model()->withSubscriber($subscriber_id);
 
-		$message = NfyMessage::model()->findByPk($message_id);
+		$dbMessage = NfyDbMessage::model()->findByPk($message_id);
+		if ($dbMessage === null)
+            throw new CHttpException(404, Yii::t("NfyModule.app", 'Message with given ID was not found.'));
+		$messages = NfyDbMessage::createMessages($dbMessage);
+		$message = reset($messages);
 
 		if (isset($_POST['delete'])) {
-			$queue->delete($message->id, $message->subscription_id);
-			$this->redirect(array('messages', 'queue_id'=> $message->queue_id, 'subscriber_id'=>$message->subscription_id));
+			$queue->delete($message->id, $message->subscriber_id);
+			$this->redirect(array('messages', 'queue_id'=> $message->queue_id, 'subscriber_id'=>$message->subscriber_id));
 		}
 
-		$this->render('message', array('queue' => $queue, 'message' => $message, 'authItems' => $authItems));
+		$this->render('message', array('queue' => $queue, 'dbMessage' => $dbMessage, 'message' => $message, 'authItems' => $authItems));
 	}
 
 	/**
@@ -242,5 +247,10 @@ class QueueController extends Controller
             $results[] = $result;
         }
 		return $results;
+	}
+
+	public function createMessageUrl(NfyMessage $message)
+	{
+		return $this->createUrl('message', array('queue_id' => $message->queue_id, 'subscriber_id' => $message->subscriber_id, 'message_id'=>$message->id));
 	}
 }
