@@ -13,6 +13,7 @@
  */
 class NfyRedisQueue extends NfyQueue
 {
+	const RESERVED_LIST = ':reserved';
 	const SUBSCRIPTIONS_HASH = ':subscriptions';
 	const SUBSCRIPTION_LIST_PREFIX = ':subscription:';
 	/**
@@ -91,7 +92,7 @@ class NfyRedisQueue extends NfyQueue
 
 		$this->redis->multi();
 
-		$this->redis->rpush($this->id, serialize($queueMessage));
+		$this->redis->lpush($this->id, serialize($queueMessage));
 
 		foreach($subscriptions as $rawSubscription) {
 			$subscription = unserialize($rawSubscription);
@@ -104,7 +105,7 @@ class NfyRedisQueue extends NfyQueue
                 continue;
             }
 
-			$this->redis->rpush($this->id.self::SUBSCRIPTION_LIST_PREFIX.$subscription->subscriber_id, serialize($subscriptionMessage));
+			$this->redis->lpush($this->id.self::SUBSCRIPTION_LIST_PREFIX.$subscription->subscriber_id, serialize($subscriptionMessage));
             
             $this->afterSendSubscription($subscriptionMessage, $subscription->subscriber_id);
 		}
@@ -120,6 +121,7 @@ class NfyRedisQueue extends NfyQueue
 		if ($this->blocking) {
 			throw new CException('Not supported. When in blocking mode peeking is not available. Use the receive() method.');
 		}
+		//! @todo implement peeking at other lists, joining, sorting results by date and limiting
 		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		$messages = array();
 		foreach($this->redis->lrange($list_id, 0, $limit) as $rawMessage) {
@@ -134,13 +136,24 @@ class NfyRedisQueue extends NfyQueue
 	public function reserve($subscriber_id=null, $limit=-1)
 	{
 		if ($this->blocking) {
-			throw new CException('Not supported. When in blocking mode peeking is not available. Use the receive() method.');
+			throw new CException('Not supported. When in blocking mode reserving is not available. Use the receive() method.');
 		}
-		throw new CException('Not implemented. Redis queues does not support reserving messages. Use the receive() method.');
+
+		$messages = array();
+		$count = 0;
+		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
+		$reserved_list_id = $list_id.self::RESERVED_LIST;
+		while (($limit == -1 || $count < $limit) && ($message=$this->redis->rpoplpush($list_id, $reserved_list_id)) !== null) {
+			$messages[] = unserialize($message);
+			$count++;
+		}
+
+		return $messages;
 	}
 
 	/**
 	 * @inheritdoc
+	 * The result does not include reserved but timed-out messages. @see releaseTimedout().
 	 */
 	public function receive($subscriber_id=null, $limit=-1)
 	{
@@ -165,7 +178,7 @@ class NfyRedisQueue extends NfyQueue
 			return $messages;
 		}
 		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
-		while (($limit == -1 || $count < $limit) && ($message=$this->redis->lpop($list_id)) !== null) {
+		while (($limit == -1 || $count < $limit) && ($message=$this->redis->rpop($list_id)) !== null) {
 			$messages[] = unserialize($message);
 			$count++;
 		}
@@ -178,7 +191,10 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function delete($message_id, $subscriber_id=null)
 	{
-		throw new CException('Not implemented. Redis queues does not support reserving messages.');
+		if ($this->blocking) {
+			throw new CException('Not supported. When in blocking mode reserving is not available. Use the receive() method.');
+		}
+		$this->releaseInternal($message_id, true);
 	}
 
 	/**
@@ -186,7 +202,59 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function release($message_id, $subscriber_id=null)
 	{
-		throw new CException('Not implemented. Redis queues does not support reserving messages.');
+		if ($this->blocking) {
+			throw new CException('Not supported. When in blocking mode reserving is not available. Use the receive() method.');
+		}
+		$this->releaseInternal($message_id, false);
+	}
+
+	private function releaseInternal($message_id, $delete=false)
+	{
+		if (!is_array($message_id)) {
+			$message_id = array($message_id);
+		}
+		$message_id = array_flip($message_id);
+		$this->redis->multi();
+		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
+		$reserved_list_id = $list_id.self::RESERVED_LIST;
+		$messages = array_reverse($this->redis->lrange($reserved_list_id, 0, -1));
+		foreach($messages as $rawMessage) {
+			$message = unserialize($rawMessage);
+			if (isset($message_id[$message->id])) {
+				$this->redis->lrem($reserved_list_id, $rawMessage, -1);
+				if (!$delete) {
+					$this->redis->lpush($list_id, $rawMessage);
+				}
+			}
+		}
+		$this->redis->exec();
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function releaseTimedout()
+	{
+		$keys = array_merge($this->redis->keys($this->id.self::RESERVED_LIST), $this->redis->keys($this->id.self::SUBSCRIPTION_LIST_PREFIX.'*'.self::RESERVED_LIST));
+		$message_ids = array();
+
+		$this->redis->multi();
+		foreach($keys as $reserved_list_id) {
+			$list_id = substr($reserved_list_id, 0, -strlen(self::RESERVED_LIST));
+			$messages = array_reverse($this->redis->lrange($reserved_list_id, 0, -1));
+			$now = new DateTime;
+			foreach($messages as $rawMessage) {
+				$message = unserialize($rawMessage);
+				$created_on = new DateTime($message->created_on);
+				if ($created_on->add(new DateInterval('PT'.$message->timeout.'S')) <= $now) {
+					$this->redis->lrem($reserved_list_id, $rawMessage, -1);
+					$this->redis->lpush($list_id, $rawMessage);
+					$message_ids[] = $message->id;
+				}
+			}
+		}
+		$this->redis->exec();
+		return $message_ids;
 	}
 
 	/**

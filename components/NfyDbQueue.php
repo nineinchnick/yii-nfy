@@ -182,6 +182,23 @@ class NfyDbQueue extends NfyQueue
 	}
 
 	/**
+	 * Releases timed-out messages.
+	 * @return array of released message ids
+	 */
+	public function releaseTimedout()
+	{
+        $trx = NfyDbMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyDbMessage::model()->getDbConnection()->beginTransaction();
+		$pk = NfyDbMessage::model()->tableSchema->primaryKey;
+		$messages = NfyDbMessage::model()->withQueue($this->id)->timedout($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
+		$message_ids = array_keys($messages);
+		NfyDbMessage::model()->updateByPk($message_ids, array('status'=>NfyMessage::AVAILABLE));
+		if ($trx !== null) {
+			$trx->commit();
+		}
+		return $message_ids;
+	}
+
+	/**
 	 * @inheritdoc
 	 */
 	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null)
@@ -265,23 +282,6 @@ class NfyDbQueue extends NfyQueue
 		NfyDbSubscription::model()->current()->withQueue($this->id)->with(array('categories'));
 		$dbSubscriptions = $subscriber_id===null ? NfyDbSubscription::model()->findAll() : NfyDbSubscription::model()->findByAttributes(array('subscriber_id'=>$subscriber_id));
 		return NfyDbSubscription::createSubscriptions($dbSubscriptions);
-	}
-
-	/**
-	 * Releases timed-out messages.
-	 * @return array of released message ids
-	 */
-	public function releaseTimedout()
-	{
-        $trx = NfyDbMessage::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyDbMessage::model()->getDbConnection()->beginTransaction();
-		$pk = NfyDbMessage::model()->tableSchema->primaryKey;
-		$messages = NfyDbMessage::model()->withQueue($this->id)->timedout($this->timeout)->findAllByPk($message_id, array('select'=>$pk, 'index'=>$pk));
-		$message_ids = array_keys($messages);
-		NfyDbMessage::model()->updateByPk($message_ids, array('status'=>NfyMessage::AVAILABLE));
-		if ($trx !== null) {
-			$trx->commit();
-		}
-		return $message_ids;
 	}
 
 	/**

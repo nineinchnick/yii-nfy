@@ -83,6 +83,11 @@ interface NfyQueueInterface
 	 */
 	public function release($message_id, $subscriber_id=null);
 	/**
+	 * Releases all timed-out reserved messages.
+	 * @return array of released message ids
+	 */
+	public function releaseTimedout();
+	/**
 	 * Subscribes a recipient to this queue. If categories are specified, only matching messages will be delivered.
 	 * Categories can end with an wildcard (asterisk).
 	 * @param mixed $subscriber_id the actual format depends on the implementation

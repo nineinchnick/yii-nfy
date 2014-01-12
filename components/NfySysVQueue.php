@@ -158,6 +158,14 @@ class NfySysVQueue extends NfyQueue
 	/**
 	 * @inheritdoc
 	 */
+	public function releaseTimedout()
+	{
+		throw new CException('Not implemented. System V queues does not support reserving messages.');
+	}
+
+	/**
+	 * @inheritdoc
+	 */
 	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null)
 	{
 		throw new CException('Not implemented. System V queues does not support subscriptions.');
