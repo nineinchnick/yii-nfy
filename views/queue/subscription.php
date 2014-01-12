@@ -6,10 +6,10 @@
 
 $this->breadcrumbs=array(
 	Yii::t('NfyModule.app', 'Queues')=>array('index'),
-	$queue->name,
+	$queue->label,
 );
 ?>
-<h1><?php echo $queue->name; ?></h1>
+<h1><?php echo $queue->label; ?></h1>
 <div class="form">
 
 <?php $form=$this->beginWidget('CActiveForm', array(

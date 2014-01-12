@@ -11,7 +11,7 @@ $this->breadcrumbs=array(
 
 <p>
 <?php $this->widget('zii.widgets.CListView', array(
-    'dataProvider' => new CArrayDataProvider($queues, array('keyField'=>'id')),
+    'dataProvider' => new CArrayDataProvider($queues),
     'itemView' => $subscribedOnly ? '_queue_messages' : '_queue_subscriptions',
 )); ?>
 </p>

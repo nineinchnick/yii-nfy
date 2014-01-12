@@ -2,13 +2,25 @@
 
 class MessagesWidget extends CWidget
 {
+	/**
+	 * @var array Keys must be queue component names and values must be arrays of NfyMessage objects.
+	 */
     public $messages = array();
 
 	public $whiteIcons = false;
+
+	protected function countMessages()
+	{
+		$count = 0;
+		foreach($this->messages as $queueName => $messages) {
+			$count += count($messages);
+		}
+		return $count;
+	}
     
 	public function createMenuItem()
 	{
-		$count = count($this->messages);
+		$count = $this->countMessages();
 		return array(
 			'url' => '/nfy/queue',
 			'label' => ($count > 0 ? ('<span class="label label-warning">' . $count . '</span>') : ''),
@@ -32,12 +44,14 @@ class MessagesWidget extends CWidget
 			$queueController = new QueueController('queue', Yii::app()->getModule('nfy'));
 		}
 		
-		foreach($this->messages as $message) {
-			$text = addcslashes($message->body, "'\r\n");
-			$detailsUrl = $queueController->createMessageUrl($message);
-			
-			$extraCss = (++$cnt % 2) === 0 ? 'even' : 'odd';
-			$elements .= "<div class=\"messagePopoverItem {$extraCss}\" onclick=\"window.location=\\'{$detailsUrl}\\'; return false;\">{$text}</div>";
+		foreach($this->messages as $queueName => $messages) {
+			foreach($messages as $message) {
+				$text = addcslashes($message->body, "'\r\n");
+				$detailsUrl = $queueController->createMessageUrl($queueName, $message);
+				
+				$extraCss = (++$cnt % 2) === 0 ? 'even' : 'odd';
+				$elements .= "<div class=\"messagePopoverItem {$extraCss}\" onclick=\"window.location=\\'{$detailsUrl}\\'; return false;\">{$text}</div>";
+			}
 		}
 		
 		$label = Yii::t('NfyModule.app', 'Mark all as read');

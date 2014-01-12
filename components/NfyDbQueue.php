@@ -41,7 +41,7 @@ class NfyDbQueue extends NfyQueue
 		$queueMessage = $this->createMessage($message);
 
         if ($this->beforeSend($queueMessage) !== true) {
-			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
             return;
         }
 
@@ -53,7 +53,7 @@ class NfyDbQueue extends NfyQueue
         
 		// empty($subscriptions) && 
         if (!$queueMessage->save()) {
-			Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_ERROR, 'nfy');
+			Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_ERROR, 'nfy');
             return false;
         }
 
@@ -66,9 +66,9 @@ class NfyDbQueue extends NfyQueue
             }
 
 			if (!$subscriptionMessage->save()) {
-				Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_name} for the subscription {subscription_id}.", array(
+				Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_label} for the subscription {subscription_id}.", array(
 					'{msg}' => $queueMessage->body,
-					'{queue_name}' => $this->name,
+					'{queue_label}' => $this->label,
 					'{subscription_id}' => $subscription->id,
 				)), CLogger::LEVEL_ERROR, 'nfy');
 				$success = false;
@@ -83,7 +83,7 @@ class NfyDbQueue extends NfyQueue
 			$trx->commit();
 		}
 
-		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
 
 		return $success;
 	}
@@ -189,7 +189,7 @@ class NfyDbQueue extends NfyQueue
 			NfyDbSubscriptionCategory::model()->deleteAllByAttributes(array('subscription_id'=>$subscription->primaryKey));
 		}
 		if (!$subscription->save())
-			throw new CException(Yii::t('NfyModule.app', 'Failed to subscribe {subscriber_id} to {queue_name}', array('{subscriber_id}'=>$subscriber_id, '{queue_name}'=>$this->name)));
+			throw new CException(Yii::t('NfyModule.app', 'Failed to subscribe {subscriber_id} to {queue_label}', array('{subscriber_id}'=>$subscriber_id, '{queue_label}'=>$this->label)));
 		$this->saveSubscriptionCategories($categories, $subscription->primaryKey, false);
 		$this->saveSubscriptionCategories($exceptions, $subscription->primaryKey, true);
 		if ($trx !== null) {

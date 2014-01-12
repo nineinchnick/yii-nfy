@@ -40,10 +40,11 @@ class QueueController extends Controller
 
 	/**
 	 * Subscribe current user to selected queue.
+	 * @param string $queue_name
 	 */
-	public function actionSubscribe($queue_id)
+	public function actionSubscribe($queue_name)
 	{
-        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.subscribe'));
+        list($queue, $authItems) = $this->loadQueue($queue_name, array('nfy.queue.subscribe'));
 
 		$formModel = new SubscriptionForm('create');
         if (isset($_POST['SubscriptionForm'])) {
@@ -58,24 +59,25 @@ class QueueController extends Controller
 
 	/**
 	 * Unsubscribe current user from selected queue.
+	 * @param string $queue_name
 	 */
-	public function actionUnsubscribe($queue_id)
+	public function actionUnsubscribe($queue_name)
 	{
-        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.queue.unsubscribe'));
+        list($queue, $authItems) = $this->loadQueue($queue_name, array('nfy.queue.unsubscribe'));
 		$queue->unsubscribe(Yii::app()->user->getId());
 		$this->redirect(array('index'));
 	}
 
 	/**
 	 * Displays and send messages in the specified queue.
-	 * @param string $queue_id
+	 * @param string $queue_name
 	 * @param string $subscriber_id
 	 */
-	public function actionMessages($queue_id, $subscriber_id=null)
+	public function actionMessages($queue_name, $subscriber_id=null)
 	{
 		if (($subscriber_id=trim($subscriber_id))==='')
 			$subscriber_id = null;
-        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
+        list($queue, $authItems) = $this->loadQueue($queue_name, array('nfy.message.read', 'nfy.message.create'));
 		$this->verifySubscriber($queue, $subscriber_id);
 
 		$formModel = new MessageForm('create');
@@ -83,7 +85,7 @@ class QueueController extends Controller
 			$formModel->attributes=$_POST['MessageForm'];
 			if($formModel->validate()) {
 				$queue->send($formModel->content, $formModel->category);
-				$this->redirect(array('messages', 'queue_id'=>$queue_id, 'subscriber_id'=>$subscriber_id));
+				$this->redirect(array('messages', 'queue_name'=>$queue_name, 'subscriber_id'=>$subscriber_id));
 			}
         }
 
@@ -96,20 +98,26 @@ class QueueController extends Controller
             // reverse display order to simulate a chat window, where latest message is right above the message form
             $dataProvider->setData(array_reverse($dataProvider->getData()));
         }
-        $this->render('messages', array('queue' => $queue, 'dataProvider' => $dataProvider, 'model' => $formModel, 'authItems' => $authItems));
+		$this->render('messages', array(
+			'queue' => $queue,
+			'queue_name' => $queue_name,
+			'dataProvider' => $dataProvider,
+			'model' => $formModel,
+			'authItems' => $authItems,
+		));
 	}
 
 	/**
 	 * Fetches details of a single message, allows to release or delete it or sends a new message.
-	 * @param string $queue_id
+	 * @param string $queue_name
 	 * @param string $subscriber_id
 	 * @param string $message_id
 	 */
-	public function actionMessage($queue_id, $subscriber_id=null, $message_id=null)
+	public function actionMessage($queue_name, $subscriber_id=null, $message_id=null)
 	{
 		if (($subscriber_id=trim($subscriber_id))==='')
 			$subscriber_id = null;
-        list($queue, $authItems) = $this->loadQueue($queue_id, array('nfy.message.read', 'nfy.message.create'));
+        list($queue, $authItems) = $this->loadQueue($queue_name, array('nfy.message.read', 'nfy.message.create'));
 		$this->verifySubscriber($queue, $subscriber_id);
 
 		//! @todo replace with a method from NfyMessage
@@ -125,25 +133,31 @@ class QueueController extends Controller
 
 		if (isset($_POST['delete'])) {
 			$queue->delete($message->id, $message->subscriber_id);
-			$this->redirect(array('messages', 'queue_id'=> $message->queue_id, 'subscriber_id'=>$message->subscriber_id));
+			$this->redirect(array('messages', 'queue_name'=> $queue_name, 'subscriber_id'=>$message->subscriber_id));
 		}
 
-		$this->render('message', array('queue' => $queue, 'dbMessage' => $dbMessage, 'message' => $message, 'authItems' => $authItems));
+		$this->render('message', array(
+			'queue' => $queue,
+			'queue_name' => $queue_name,
+			'dbMessage' => $dbMessage,
+			'message' => $message,
+			'authItems' => $authItems,
+		));
 	}
 
 	/**
 	 * Loads queue specified by id and checks authorization.
-	 * @param string $id queue component id
+	 * @param string $name queue component name
 	 * @param array $authItems
 	 * @return array NfyQueueInterface object and array with authItems as keys and boolean values
 	 * @throws CHttpException 403 or 404
 	 */
-    protected function loadQueue($id, $authItems=array())
+    protected function loadQueue($name, $authItems=array())
     {
 		/** @var CWebUser */
 		$user = Yii::app()->user;
 		/** @var NfyQueue */
-		$queue = Yii::app()->getComponent($id);
+		$queue = Yii::app()->getComponent($name);
 		if (!($queue instanceof NfyQueueInterface))
             throw new CHttpException(404, Yii::t("NfyModule.app", 'Queue with given ID was not found.'));
         $assignedAuthItems = array();
@@ -238,7 +252,7 @@ class QueueController extends Controller
         $results = array();
         foreach($messages as $message) {
             $result = array(
-                'title'=>$queue->name,
+                'title'=>$queue->label,
                 'body'=>$message->body,
             );
             if ($soundUrl!==null) {
@@ -249,8 +263,8 @@ class QueueController extends Controller
 		return $results;
 	}
 
-	public function createMessageUrl(NfyMessage $message)
+	public function createMessageUrl($queue_name, NfyMessage $message)
 	{
-		return $this->createUrl('message', array('queue_id' => $message->queue_id, 'subscriber_id' => $message->subscriber_id, 'message_id'=>$message->id));
+		return $this->createUrl('message', array('queue_name' => $queue_name, 'subscriber_id' => $message->subscriber_id, 'message_id'=>$message->id));
 	}
 }

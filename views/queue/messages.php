@@ -2,21 +2,23 @@
 /* @var $this QueueController */
 /* @var $dataProvider CArrayDataProvider */
 /* @var $queue NfyQueueInterface */
+/* @var $queue_name string */
 /* @var $model MessageForm */
 /* @var $authItems array */
 
 $this->breadcrumbs=array(
 	Yii::t('NfyModule.app', 'Queues')=>array('index'),
-	$queue->name,
+	$queue->label,
 );
 ?>
-<h1><?php echo $queue->name; ?></h1>
+<h1><?php echo $queue->label; ?></h1>
 
 <?php if ($authItems['nfy.message.read']): ?>
 <p>
 <?php $this->widget('zii.widgets.CListView', array(
     'dataProvider'=>$dataProvider,
     'itemView'=>'_message_item',
+	'viewData' => array('queue_name' => $queue_name),
 	'template' => "{summary}\n{pager}\n{items}",
     'pager' => array(
         'class' => 'CLinkPager',

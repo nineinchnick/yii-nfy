@@ -1,13 +1,14 @@
 <?php
 /* @var $this QueueController */
 /* @var $queue NfyQueueInterface */
+/* @var $queue_name string */
 /* @var $dbMessage NfyDbMessage */
 /* @var $message NfyMessage */
 /* @var $authItems array */
 
 $this->breadcrumbs=array(
 	Yii::t('NfyModule.app', 'Queues')=>array('index'),
-	$queue->name=>array('messages', 'queue_id'=>$message->queue_id, 'subscriber_id'=>$message->subscriber_id),
+	$queue->label=>array('messages', 'queue_name'=>$queue_name, 'subscriber_id'=>$message->subscriber_id),
 	$message->id,
 );
 
@@ -21,11 +22,11 @@ $this->breadcrumbs=array(
 </div>
 <div>
 <?php if ((int)$message->status === NfyMessage::AVAILABLE): ?>
-	<form method="post" action="<?php echo $this->createMessageUrl($message); ?>">
+	<form method="post" action="<?php echo $this->createMessageUrl($queue_name, $message); ?>">
 		<?php echo CHtml::submitButton(Yii::t('NfyModule.app', 'Mark as read'), array('name'=>'delete')); ?>
 	</form>
 <?php endif; ?>
-    <?php echo CHtml::link(CHtml::encode(Yii::t('NfyModule.app', 'Back to messages list')), array('messages', 'queue_id'=>$message->queue_id, 'subscriber_id'=>$message->subscriber_id)); ?>
+    <?php echo CHtml::link(CHtml::encode(Yii::t('NfyModule.app', 'Back to messages list')), array('messages', 'queue_name'=>$queue_name, 'subscriber_id'=>$message->subscriber_id)); ?>
 </div>
 
 <?php if (!Yii::app()->user->checkAccess('nfy.message.read.subscribed', array(), true, false) && ($otherMessages=$dbMessage->subscriptionMessages(array(

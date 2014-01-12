@@ -81,22 +81,22 @@ class NfySysVQueue extends NfyQueue
 		$queueMessage = $this->createMessage($message);
 
         if ($this->beforeSend($queueMessage) !== true) {
-			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
             return;
         }
 
 		$success = msg_send($this->getQueue(), 1, $queueMessage, true, false, $errorcode);
         if (!$success) {
-			Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_ERROR, 'nfy');
+			Yii::log(Yii::t('NfyModule.app', "Failed to save message '{msg}' in queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_ERROR, 'nfy');
 			if ($errorcode === MSG_EAGAIN) {
-				Yii::log(Yii::t('NfyModule.app', "Queue {queue_name} is full.", array('{queue_name}' => $this->name)), CLogger::LEVEL_ERROR, 'nfy');
+				Yii::log(Yii::t('NfyModule.app', "Queue {queue_label} is full.", array('{queue_label}' => $this->label)), CLogger::LEVEL_ERROR, 'nfy');
 			}
             return false;
         }
 
         $this->afterSend($queueMessage);
 
-		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
 	}
 
 	/**

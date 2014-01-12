@@ -13,10 +13,6 @@ class NfyMessage
 	 */
 	public $id;
 	/**
-	 * @var string $queue_id Unique identifier of the queue the message belongs to
-	 */
-	public $queue_id;
-	/**
 	 * @var string $created_on Date and time when the message has been created, in Y-m-d H:i:s format
 	 */
 	public $created_on;

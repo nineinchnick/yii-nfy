@@ -102,4 +102,16 @@ class NfyCommand extends CConsoleCommand
 		}
 		var_dump($q->receive(null, $limit));
 	}
+
+	/**
+	 * @param string $queue name of the queue component
+	 */
+	public function actionPeek($queue, $limit=-1)
+	{
+		$q = Yii::app()->getComponent($queue);
+		if ($q === null) {
+			throw new CException('Queue not found.');
+		}
+		var_dump($q->peek(null, $limit));
+	}
 }

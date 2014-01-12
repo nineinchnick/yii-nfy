@@ -58,7 +58,7 @@ class NfyRedisQueue extends NfyQueue
 		$queueMessage = $this->createMessage($message);
 
         if ($this->beforeSend($queueMessage) !== true) {
-			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+			Yii::log(Yii::t('NfyModule.app', "Not sending message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
             return;
         }
 
@@ -66,7 +66,7 @@ class NfyRedisQueue extends NfyQueue
 
         $this->afterSend($queueMessage);
 
-		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_name}.", array('{msg}' => $queueMessage->body, '{queue_name}' => $this->name)), CLogger::LEVEL_INFO, 'nfy');
+		Yii::log(Yii::t('NfyModule.app', "Sent message '{msg}' to queue {queue_label}.", array('{msg}' => $queueMessage->body, '{queue_label}' => $this->label)), CLogger::LEVEL_INFO, 'nfy');
 	}
 
 	/**
