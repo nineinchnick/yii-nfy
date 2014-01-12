@@ -18,6 +18,7 @@ class NfySysVQueue extends NfyQueue
 	 * @var integer New queues filesystem permissions, defaults to 0666, @see msg_get_queue().
 	 */
 	public $permissions = 0666;
+
 	/**
 	 * @inheritdoc
 	 */
@@ -28,6 +29,7 @@ class NfySysVQueue extends NfyQueue
 			throw new CException(Yii::t('NfyModule.app', 'Queue id must be exactly a one character.'));
 		}
 	}
+
 	/**
 	 * Return a number representing the current queue.
 	 * @return integer
@@ -118,7 +120,7 @@ class NfySysVQueue extends NfyQueue
 	/**
 	 * Gets available messages from the queue and removes them from the queue.
 	 * @param mixed $subscriber_id unused, must be null
-	 * @param integer $limit number of available messages that will be fetched from the queue, defaults to -1 which means no limit, if null, one message will be fetched in blocking mode
+	 * @param integer $limit number of available messages that will be fetched from the queue, defaults to -1 which means no limit
 	 * @return array of NfyMessage objects
 	 */
 	public function receive($subscriber_id=null, $limit=-1)
@@ -126,18 +128,12 @@ class NfySysVQueue extends NfyQueue
 		if ($subscriber_id !== null) {
 			throw new CException('Not implemented. System V queues does not support subscriptions.');
 		}
+		$flags = $this->blocking ? 0 : MSG_IPC_NOWAIT;
 		$messages = array();
 		$count = 0;
-		if ($limit === null) {
-			if (msg_receive($this->getQueue(), 0, $msgtype, self::MSG_MAXSIZE, $message, true, 0, $errorcode)) {
-				$messages[] = $message;
-				$count = 1;
-			}
-		} else {
-			while (($limit == -1 || $count < $limit) && (msg_receive($this->getQueue(), 0, $msgtype, self::MSG_MAXSIZE, $message, true, MSG_IPC_NOWAIT, $errorcode))) {
-				$messages[] = $message;
-				$count++;
-			}
+		while (($limit == -1 || $count < $limit) && (msg_receive($this->getQueue(), 0, $msgtype, self::MSG_MAXSIZE, $message, true, $flags, $errorcode))) {
+			$messages[] = $message;
+			$count++;
 		}
 
 		return $messages;

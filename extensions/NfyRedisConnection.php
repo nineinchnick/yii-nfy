@@ -343,9 +343,30 @@ class NfyRedisConnection extends CApplicationComponent
 		return $this->parseResponse(implode(' ', $params));
 	}
 
-	private function parseResponse($command)
+	/**
+	 * Parses a message returned from Redis.
+	 *
+	 * @param string $command executed command name and its params, used only in exception messages
+	 * @param boolean $ignoreTimeout if true, null will be returned on timeout instead of throwing an exception
+	 * @return array|bool|null|string Dependend on the executed command this method
+	 * will return different data types:
+	 *
+	 * - `true` for commands that return "status reply".
+	 * - `string` for commands that return "integer reply"
+	 *   as the value is in the range of a signed 64 bit integer.
+	 * - `string` or `null` for commands that return "bulk reply".
+	 * - `array` for commands that return "Multi-bulk replies".
+	 *
+	 * See [redis protocol description](http://redis.io/topics/protocol)
+	 * for details on the mentioned reply types.
+	 */
+	public function parseResponse($command, $ignoreTimeout=false)
 	{
 		if (($line = fgets($this->_socket)) === false) {
+			$info = stream_get_meta_data($fp);
+			if ($info['timed_out']) {
+				return null;
+			}
 			throw new CException("Failed to read from socket.\nRedis command was: " . $command);
 		}
 		$type = $line[0];

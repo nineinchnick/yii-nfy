@@ -6,6 +6,17 @@
 class NfyDbQueue extends NfyQueue
 {
 	/**
+	 * @inheritdoc
+	 */
+	public function init()
+	{
+		parent::init();
+		if ($this->blocking) {
+			throw new CException(Yii::t('NfyModule.app', 'Not implemented. DbQueue does not support blocking.'));
+		}
+	}
+
+	/**
 	 * Creates an instance of NfyDbMessage model. The passed message body may be modified, @see formatMessage().
 	 * This method may be overriden in extending classes.
 	 * @param string $body message body

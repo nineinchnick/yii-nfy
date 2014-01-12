@@ -19,6 +19,10 @@ abstract class NfyQueue extends CApplicationComponent implements NfyQueueInterfa
 	 * If null, reserved messages never time out.
 	 */
 	public $timeout;
+	/**
+	 * @var boolean $blocking If true, when fetching messages, waits until a new message is sent if there are none in the queue. Does not determine blocking on sending.
+	 */
+	public $blocking = false;
 
 	/**
 	 * @inheritdoc
