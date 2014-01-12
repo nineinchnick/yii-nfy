@@ -5,6 +5,8 @@
  */
 class NfyRedisQueue extends NfyQueue
 {
+	const SUBSCRIPTIONS_HASH = ':subscriptions';
+	const SUBSCRIPTION_LIST_PREFIX = ':subscription:';
 	/**
 	 * @var string|NfyRedisConnection Name or a redis connection component to use as storage.
 	 */
@@ -62,7 +64,27 @@ class NfyRedisQueue extends NfyQueue
             return;
         }
 
+		$subscriptions = $this->redis->hvals($this->id.self::SUBSCRIPTIONS_HASH);
+
+		$this->redis->multi();
+
 		$this->redis->rpush($this->id, serialize($queueMessage));
+
+		foreach($subscriptions as $rawSubscription) {
+			$subscription = unserialize($rawSubscription);
+			if ($category !== null && !$subscription->matchCategory($category)) {
+				continue;
+			}
+			$subscriptionMessage = clone $queueMessage;
+			$subscriptionMessage->message_id = $queueMessage->id;
+            if ($this->beforeSendSubscription($subscriptionMessage, $subscription->subscriber_id) !== true) {
+                continue;
+            }
+
+			$this->redis->rpush($this->id.self::SUBSCRIPTION_LIST_PREFIX.$subscription->subscriber_id, serialize($subscriptionMessage));
+            
+            $this->afterSendSubscription($subscriptionMessage, $subscription->subscriber_id);
+		}
 
         $this->afterSend($queueMessage);
 
@@ -74,8 +96,9 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function peek($subscriber_id=null, $limit=-1, $status=NfyMessage::AVAILABLE)
 	{
+		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		$messages = array();
-		foreach($this->redis->lrange($this->id, 0, $limit) as $rawMessage) {
+		foreach($this->redis->lrange($list_id, 0, $limit) as $rawMessage) {
 			$messages[] = unserialize($rawMessage);
 		}
 		return $messages;
@@ -94,12 +117,10 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function receive($subscriber_id=null, $limit=-1)
 	{
-		if ($subscriber_id !== null) {
-			throw new CException('Not implemented. Redis queues does not support subscriptions.');
-		}
+		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		$messages = array();
 		$count = 0;
-		while (($limit == -1 || $count < $limit) && ($message=$this->redis->lpop($this->id)) !== null) {
+		while (($limit == -1 || $count < $limit) && ($message=$this->redis->lpop($list_id)) !== null) {
 			$messages[] = unserialize($message);
 			$count++;
 		}
@@ -128,7 +149,16 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null)
 	{
-		throw new CException('Not implemented. Redis queues does not support subscriptions.');
+		$now = new DateTime('now', new DateTimezone('UTC'));
+		$subscription = new NfySubscription;
+		$subscription->setAttributes(array(
+			'subscriber_id'=>$subscriber_id,
+			'label'=>$label,
+			'categories'=>$categories,
+			'exceptions'=>$exceptions,
+			'created_on'=>$now->format('Y-m-d H:i:s'),
+		));
+		$this->redis->hset($this->id.self::SUBSCRIPTIONS_HASH, $subscriber_id, serialize($subscription));
 	}
 
 	/**
@@ -136,7 +166,7 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function unsubscribe($subscriber_id, $permanent=true)
 	{
-		throw new CException('Not implemented. Redis queues does not support subscriptions.');
+		$this->redis->hdel($this->id.self::SUBSCRIPTIONS_HASH, $subscriber_id);
 	}
 
 	/**
@@ -144,6 +174,6 @@ class NfyRedisQueue extends NfyQueue
 	 */
 	public function isSubscribed($subscriber_id)
 	{
-		throw new CException('Not implemented. Redis queues does not support subscriptions.');
+		return $this->redis->hexists($this->id.self::SUBSCRIPTIONS_HASH, $subscriber_id);
 	}
 }

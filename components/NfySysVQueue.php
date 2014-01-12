@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Saves sent messages and tracks subscriptions using System V message queues.
+ * Sends and receives messages using System V message queues.
  */
 class NfySysVQueue extends NfyQueue
 {
