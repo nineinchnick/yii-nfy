@@ -3,7 +3,8 @@
 /**
  * Saves sent messages and tracks subscriptions in a database.
  */
-class NfyDbQueue extends NfyQueue {
+class NfyDbQueue extends NfyQueue
+{
 	/**
 	 * Creates an instance of NfyDbMessage model. The passed message body may be modified, @see formatMessage().
 	 * This method may be overriden in extending classes.
@@ -16,7 +17,7 @@ class NfyDbQueue extends NfyQueue {
 		$message->setAttributes(array(
 			'queue_id'		=> $this->id,
 			'timeout'		=> $this->timeout,
-			'sender_id'		=> Yii::app()->user->getId(),
+			'sender_id'		=> Yii::app()->hasComponent('user') ? Yii::app()->user->getId() : null,
 			'status'		=> NfyMessage::AVAILABLE,
 			'body'			=> $body,
 		), false);
@@ -100,7 +101,7 @@ class NfyDbQueue extends NfyQueue {
 	/**
 	 * @inheritdoc
 	 */
-	public function reserve($subscriber_id=null, $limit=null)
+	public function reserve($subscriber_id=null, $limit=-1)
 	{
 		return $this->receiveInternal($subscriber_id, $limit, self::GET_RESERVE);
 	}
@@ -108,7 +109,7 @@ class NfyDbQueue extends NfyQueue {
 	/**
 	 * @inheritdoc
 	 */
-	public function receive($subscriber_id=null, $limit=null)
+	public function receive($subscriber_id=null, $limit=-1)
 	{
 		return $this->receiveInternal($subscriber_id, $limit, self::GET_DELETE);
 	}

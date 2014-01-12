@@ -77,4 +77,29 @@ class NfyCommand extends CConsoleCommand
             $auth->removeAuthItem($template['name']);
         }
     }
+
+	/**
+	 * @param string $queue name of the queue component
+	 * @param string $message
+	 */
+	public function actionSend($queue, $message)
+	{
+		$q = Yii::app()->getComponent($queue);
+		if ($q === null) {
+			throw new CException('Queue not found.');
+		}
+		$q->send($message);
+	}
+
+	/**
+	 * @param string $queue name of the queue component
+	 */
+	public function actionReceive($queue, $limit=-1)
+	{
+		$q = Yii::app()->getComponent($queue);
+		if ($q === null) {
+			throw new CException('Queue not found.');
+		}
+		var_dump($q->receive(null, $limit));
+	}
 }

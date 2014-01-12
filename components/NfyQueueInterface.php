@@ -49,25 +49,25 @@ interface NfyQueueInterface
 	 * Gets messages from the queue, but neither reserves or removes them.
 	 * Messages are sorted by date and time of creation.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
-	 * @param integer $limit if null, all available messages are fetched from the queue
+	 * @param integer $limit number of available messages that will be fetched from the queue, defaults to -1 which means no limit
 	 * @param integer|array $status allows peeking at reserved or removed messages (not yet permanently)
 	 * @return array of NfyMessage objects
 	 */
-	public function peek($subscriber_id=null, $limit=null, $status=NfyMessage::AVAILABLE);
+	public function peek($subscriber_id=null, $limit=-1, $status=NfyMessage::AVAILABLE);
 	/**
 	 * Gets available messages from the queue and reserves them. Unless they are deleted, they will be released after a specific amount of time.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
-	 * @param integer $limit if null, all available messages are fetched from the queue
+	 * @param integer $limit number of available messages that will be fetched from the queue, defaults to -1 which means no limit
 	 * @return array of NfyMessage objects
 	 */
-	public function reserve($subscriber_id=null, $limit=null);
+	public function reserve($subscriber_id=null, $limit=-1);
 	/**
 	 * Gets available messages from the queue and removes them from the queue.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
-	 * @param integer $limit if null, all available messages are fetched from the queue
+	 * @param integer $limit number of available messages that will be fetched from the queue, defaults to -1 which means no limit
 	 * @return array of NfyMessage objects
 	 */
-	public function receive($subscriber_id=null, $limit=null);
+	public function receive($subscriber_id=null, $limit=-1);
 	/**
 	 * Deletes reserved messages from the queue.
 	 * @param integer|array $message_id one or many message ids

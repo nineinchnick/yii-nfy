@@ -26,6 +26,8 @@ return array (
   'Label' => 'Etykieta',
   'Message {id}' => 'Wiadomość {id}',
   'Not sending message \'{msg}\' to queue {queue_name}.' => 'Nie wysyłam wiadomości \'{msg}\' do kolejki {queue_name}.',
+  'Queue {queue_name} is full.' => 'Kolejka {queue_name} jest pełna.',
+  'Queue id must be exactly a one character.' => 'Id kolejki to musi być dokładnie jeden znak.',
   'Queue with given ID was not found.' => 'Kolejka o podanym ID nie została odnaleziona.',
   'Message with given ID was not found.' => 'Wiadomość o podanym ID nie została odnaleziona.',
   'Sent message \'{msg}\' to queue {queue_name}.' => 'Wysłano wiadomość \'{msg}\' do kolejki {queue_name}.',
