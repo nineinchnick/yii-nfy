@@ -178,4 +178,12 @@ class NfySysVQueue extends NfyQueue
 	{
 		throw new CException('Not implemented. System V queues does not support subscriptions.');
 	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function getSubscriptions($subscriber_id=null)
+	{
+		throw new CException('Not implemented. System V queues does not support subscriptions.');
+	}
 }

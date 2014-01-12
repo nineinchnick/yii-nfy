@@ -102,4 +102,10 @@ interface NfyQueueInterface
 	 * @return boolean
 	 */
 	public function isSubscribed($subscriber_id);
+	/**
+	 * Returns all subscriptions or one for specified subscriber, if it exists.
+	 * @param mixed $subscriber_id
+	 * @return array of NfySubscription
+	 */
+	public function getSubscriptions($subscriber_id=null);
 }

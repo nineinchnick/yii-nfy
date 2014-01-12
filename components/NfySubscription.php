@@ -70,10 +70,10 @@ class NfySubscription
 			if (($c2=rtrim($c,'.'))!==$c) {
 				if ($c2 == $category || strpos($category, $c2.'.') === 0)
 					$result = true;
-			} elseif (strpos($category, $c) === 0)
+			} elseif (strpos($category, $c) === 0) {
 				$result = true;
 			}
-		} elseif ($container == $category)
+		} elseif ($container == $category) {
 			$result = true;
 		}
 		return false;

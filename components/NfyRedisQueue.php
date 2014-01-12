@@ -213,7 +213,7 @@ class NfyRedisQueue extends NfyQueue
 			'subscriber_id'=>$subscriber_id,
 			'label'=>$label,
 			'categories'=>$categories,
-			'exceptions'=>$exceptions,
+			'exceptions'=>$exceptions !== null ? $exceptions : array(),
 			'created_on'=>$now->format('Y-m-d H:i:s'),
 		));
 		$this->redis->hset($this->id.self::SUBSCRIPTIONS_HASH, $subscriber_id, serialize($subscription));
@@ -242,5 +242,17 @@ class NfyRedisQueue extends NfyQueue
 			return;
 		}
 		return $this->redis->hexists($this->id.self::SUBSCRIPTIONS_HASH, $subscriber_id);
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function getSubscriptions($subscriber_id=null)
+	{
+		$subscriptions = array();
+		foreach($this->redis->hvals($this->id.self::SUBSCRIPTIONS_HASH) as $rawSubscription) {
+			$subscriptions[] = unserialize($rawSubscription);
+		}
+		return $subscriptions;
 	}
 }

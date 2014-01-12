@@ -157,4 +157,29 @@ class NfyDbSubscription extends CActiveRecord
         $this->getDbCriteria()->mergeWith($criteria);
         return $this;
 	}
+
+	public static function createSubscriptions($dbSubscriptions)
+	{
+		if (!is_array($dbSubscriptions)) {
+			$dbSubscriptions = array($dbSubscriptions);
+		}
+		$result = array();
+		foreach($dbSubscriptions as $dbSubscription) {
+			$attributes = $dbSubscription->getAttributes();
+			unset($attributes['id']);
+			unset($attributes['queue_id']);
+			unset($attributes['is_deleted']);
+			$subscription = new NfySubscription;
+			$subscription->setAttributes($attributes);
+			foreach($dbSubscription->categories as $category) {
+				if ($category->is_exception) {
+					$subscription->categories[] = $category->category;
+				} else {
+					$subscription->exceptions[] = $category->category;
+				}
+			}
+			$result[] = $subscription;
+		}
+		return $result;
+	}
 }

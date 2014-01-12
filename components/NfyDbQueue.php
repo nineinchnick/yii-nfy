@@ -257,6 +257,17 @@ class NfyDbQueue extends NfyQueue
 	}
 
 	/**
+	 * @param mixed $subscriber_id
+	 * @return array|NfyDbSubscription
+	 */
+	public function getSubscriptions($subscriber_id=null)
+	{
+		NfyDbSubscription::model()->current()->withQueue($this->id)->with(array('categories'));
+		$dbSubscriptions = $subscriber_id===null ? NfyDbSubscription::model()->findAll() : NfyDbSubscription::model()->findByAttributes(array('subscriber_id'=>$subscriber_id));
+		return NfyDbSubscription::createSubscriptions($dbSubscriptions);
+	}
+
+	/**
 	 * Releases timed-out messages.
 	 * @return array of released message ids
 	 */
@@ -288,15 +299,5 @@ class NfyDbQueue extends NfyQueue
 			$trx->commit();
 		}
 		return $message_ids;
-	}
-
-	/**
-	 * @param mixed $subscriber_id
-	 * @return array|NfyDbSubscription
-	 */
-	public function getSubscriptions($subscriber_id=null)
-	{
-		NfyDbSubscription::model()->current()->withQueue($this->id)->with(array('categories'));
-		return $subscriber_id===null ? NfyDbSubscription::model()->findAll() : NfyDbSubscription::model()->findByAttributes(array('subscriber_id'=>$subscriber_id));
 	}
 }
