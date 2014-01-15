@@ -40,6 +40,7 @@ return array (
   'Message category' => 'Kategoria wiadomości',
   'Message content' => 'Treść wiadomości',
   'Newer' => 'Nowsze',
+  'No message body' => 'Brak treści wiadomości',
   'Older' => 'Starsze',
   'Other recipients' => 'Pozostali odbiorcy',
   'Queues' => 'Kolejki',

@@ -129,6 +129,7 @@ class NfyRedisQueue extends NfyQueue
 		foreach($this->redis->lrange($list_id, 0, $limit) as $rawMessage) {
 			$message = unserialize($rawMessage);
 			$message->subscriber_id = $subscriber_id;
+			$message->status = NfyMessage::AVAILABLE;
 			$messages[] = $message;
 		}
 		return $messages;
@@ -198,8 +199,10 @@ class NfyRedisQueue extends NfyQueue
 		while (($limit == -1 || $count < $limit) && ($message=$this->redis->rpop($list_id)) !== null) {
 			$message = unserialize($rawMessage);
 			$message->subscriber_id = $subscriber_id;
+			$message->status = NfyMessage::AVAILABLE;
 			$messages[] = $message;
 			$count++;
+			//! @todo implement moving messages to :deleted queue (optionally, if configured)
 		}
 
 		return $messages;
@@ -243,6 +246,8 @@ class NfyRedisQueue extends NfyQueue
 				$this->redis->lrem($reserved_list_id, $rawMessage, -1);
 				if (!$delete) {
 					$this->redis->lpush($list_id, $rawMessage);
+				} else {
+					//! @todo implement moving messages to :deleted queue (optionally, if configured)
 				}
 			}
 		}

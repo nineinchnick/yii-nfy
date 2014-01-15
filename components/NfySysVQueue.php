@@ -132,6 +132,8 @@ class NfySysVQueue extends NfyQueue
 		$messages = array();
 		$count = 0;
 		while (($limit == -1 || $count < $limit) && (msg_receive($this->getQueue(), 0, $msgtype, self::MSG_MAXSIZE, $message, true, $flags, $errorcode))) {
+			$message->subscriber_id = $subscriber_id;
+			$message->status = NfyMessage::AVAILABLE;
 			$messages[] = $message;
 			$count++;
 		}

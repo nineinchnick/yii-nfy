@@ -120,16 +120,25 @@ class QueueController extends Controller
         list($queue, $authItems) = $this->loadQueue($queue_name, array('nfy.message.read', 'nfy.message.create'));
 		$this->verifySubscriber($queue, $subscriber_id);
 
-		//! @todo replace with a method from NfyMessage
-		NfyDbMessage::model()->withQueue($queue->id);
-		if ($subscriber_id !== null)
-			NfyDbMessage::model()->withSubscriber($subscriber_id);
+		if ($queue instanceof NfyDbQueue) {
+			NfyDbMessage::model()->withQueue($queue->id);
+			if ($subscriber_id !== null)
+				NfyDbMessage::model()->withSubscriber($subscriber_id);
 
-		$dbMessage = NfyDbMessage::model()->findByPk($message_id);
-		if ($dbMessage === null)
-            throw new CHttpException(404, Yii::t("NfyModule.app", 'Message with given ID was not found.'));
-		$messages = NfyDbMessage::createMessages($dbMessage);
-		$message = reset($messages);
+			$dbMessage = NfyDbMessage::model()->findByPk($message_id);
+			if ($dbMessage === null)
+				throw new CHttpException(404, Yii::t("NfyModule.app", 'Message with given ID was not found.'));
+			$messages = NfyDbMessage::createMessages($dbMessage);
+			$message = reset($messages);
+		} else {
+			//! @todo should we even bother to locate a single message by id?
+			$message = new NfyMessage;
+			$message->setAttributes(array(
+				'id' => $message_id,
+				'subscriber_id' => $subscriber_id,
+				'status' => NfyMessage::AVAILABLE,
+			));
+		}
 
 		if (isset($_POST['delete'])) {
 			$queue->delete($message->id, $message->subscriber_id);
