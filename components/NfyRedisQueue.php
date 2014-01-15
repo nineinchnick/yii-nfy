@@ -13,6 +13,7 @@
  */
 class NfyRedisQueue extends NfyQueue
 {
+	const MESSAGE_ID = ':message_id';
 	const RESERVED_LIST = ':reserved';
 	const SUBSCRIPTIONS_HASH = ':subscriptions';
 	const SUBSCRIPTION_LIST_PREFIX = ':subscription:';
@@ -47,6 +48,8 @@ class NfyRedisQueue extends NfyQueue
 		$now = new DateTime('now', new DateTimezone('UTC'));
 		$message = new NfyMessage;
 		$message->setAttributes(array(
+			'id'			=> $this->redis->incr($this->id.self::MESSAGE_ID),
+			'status'		=> NfyMessage::AVAILABLE,
 			'created_on'	=> $now->format('Y-m-d H:i:s'),
 			'sender_id'		=> Yii::app()->hasComponent('user') ? Yii::app()->user->getId() : null,
 			'body'			=> $body,
@@ -100,7 +103,6 @@ class NfyRedisQueue extends NfyQueue
 				continue;
 			}
 			$subscriptionMessage = clone $queueMessage;
-			$subscriptionMessage->message_id = $queueMessage->id;
             if ($this->beforeSendSubscription($subscriptionMessage, $subscription->subscriber_id) !== true) {
                 continue;
             }
@@ -121,11 +123,13 @@ class NfyRedisQueue extends NfyQueue
 		if ($this->blocking) {
 			throw new CException('Not supported. When in blocking mode peeking is not available. Use the receive() method.');
 		}
-		//! @todo implement peeking at other lists, joining, sorting results by date and limiting
+		//! @todo implement peeking at other lists, joining, sorting results by date and limiting, remember about settings status after unserialize
 		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		$messages = array();
 		foreach($this->redis->lrange($list_id, 0, $limit) as $rawMessage) {
-			$messages[] = unserialize($rawMessage);
+			$message = unserialize($rawMessage);
+			$message->subscriber_id = $subscriber_id;
+			$messages[] = $message;
 		}
 		return $messages;
 	}
@@ -143,10 +147,23 @@ class NfyRedisQueue extends NfyQueue
 		$count = 0;
 		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		$reserved_list_id = $list_id.self::RESERVED_LIST;
-		while (($limit == -1 || $count < $limit) && ($message=$this->redis->rpoplpush($list_id, $reserved_list_id)) !== null) {
-			$messages[] = unserialize($message);
+		$now = new DateTime;
+		$this->redis->multi();
+		while (($limit == -1 || $count < $limit)) {
+			if (($rawMessage=$this->redis->rpop($list_id)) === null) {
+				break;
+			}
+			$message = unserialize($rawMessage);
+			$message->setAttributes(array(
+				'status' => NfyMessage::RESERVED,
+				'reserved_on' => $now->format('Y-m-d H:i:s'),
+				'subscriber_id' => $subscriber_id,
+			));
+			$this->redis->lpush($reserved_list_id, serialize($message));
+			$messages[] = $message;
 			$count++;
 		}
+		$this->redis->exec();
 
 		return $messages;
 	}
@@ -179,7 +196,9 @@ class NfyRedisQueue extends NfyQueue
 		}
 		$list_id = $this->id.($subscriber_id === null ? '' : self::SUBSCRIPTION_LIST_PREFIX.$subscriber_id);
 		while (($limit == -1 || $count < $limit) && ($message=$this->redis->rpop($list_id)) !== null) {
-			$messages[] = unserialize($message);
+			$message = unserialize($rawMessage);
+			$message->subscriber_id = $subscriber_id;
+			$messages[] = $message;
 			$count++;
 		}
 
@@ -245,8 +264,8 @@ class NfyRedisQueue extends NfyQueue
 			$now = new DateTime;
 			foreach($messages as $rawMessage) {
 				$message = unserialize($rawMessage);
-				$created_on = new DateTime($message->created_on);
-				if ($created_on->add(new DateInterval('PT'.$message->timeout.'S')) <= $now) {
+				$reserved_on = new DateTime($message->reserved_on);
+				if ($reserved_on->add(new DateInterval('PT'.$message->timeout.'S')) <= $now) {
 					$this->redis->lrem($reserved_list_id, $rawMessage, -1);
 					$this->redis->lpush($list_id, $rawMessage);
 					$message_ids[] = $message->id;

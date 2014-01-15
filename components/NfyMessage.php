@@ -26,13 +26,13 @@ class NfyMessage
 	 */
 	public $message_id;
 	/**
-	 * @var string $subscriber_id Unique identifier of the subscriber (user) to which this message has been delivered to
-	 */
-	public $subscriber_id;
-	/**
 	 * @var integer $status One of self::AVAILABLE, self::RESERVED or self::DELETED
 	 */
 	public $status;
+	/**
+	 * @var string $subscriber_id Unique identifier of the subscriber (user) to which this message has been delivered to
+	 */
+	public $subscriber_id;
 	/**
 	 * @var integer $timeout Number of seconds after which when the current message is reserved it becomes available again
 	 */
@@ -46,13 +46,17 @@ class NfyMessage
 	 */
 	public $deleted_on;
 	/**
-	 * @var string $mimetype MIME type of the message body
-	 */
-	public $mimetype;
-	/**
 	 * @var string $body Message body
 	 */
 	public $body;
+
+	public function __sleep()
+	{
+		$attributes = array('id', 'created_on', 'sender_id', 'timeout', 'body');
+		if ($status == self::RESERVED) $attributes[] = 'reserved_on';
+		if ($status == self::DELETED) $attributes[] = 'deleted_on';
+		return $attributes;
+	}
 
 	/**
 	 * Sets the properties values in a massive way.
