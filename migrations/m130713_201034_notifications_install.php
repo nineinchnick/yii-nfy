@@ -10,22 +10,8 @@ class m130713_201034_notifications_install extends CDbMigration
 		$userPk = $user->tableSchema->primaryKey;
 		$userPkType = $user->tableSchema->getColumn($userPk)->dbType;
 		$schema = $user->dbConnection->schema;
-		$driver = $user->dbConnection->driver;
+		$driver = $user->dbConnection->driverName;
 
-		$this->createTable('{{nfy_messages}}', array(
-			'id'			=> 'pk',
-			'queue_id'		=> 'string NOT NULL',
-			'created_on'	=> 'timestamp NOT NULL',
-			'sender_id'		=> $userPkType.' REFERENCES '.$schema->quoteTableName($userTable).' ('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE',
-			'message_id'	=> 'integer',
-			'subscription_id' => 'integer REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
-			'status'		=> 'integer NOT NULL',
-			'timeout'		=> 'integer',
-			'reserved_on'	=> 'timestamp',
-			'deleted_on'	=> 'timestamp',
-			'mimetype'		=> 'string NOT NULL DEFAULT \'text/plain\'',
-			'body'			=> 'text',
-		));
 		$this->createTable('{{nfy_subscriptions}}', array(
 			'id'		=> 'pk',
 			'queue_id'	=> 'string NOT NULL',
@@ -39,6 +25,20 @@ class m130713_201034_notifications_install extends CDbMigration
 			'subscription_id'=>'integer NOT NULL REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
 			'category'=>'string NOT NULL',
 			'is_exception'=>'boolean NOT NULL DEFAULT '.($driver==='sqlite' ? '0' : 'false'),
+		));
+		$this->createTable('{{nfy_messages}}', array(
+			'id'			=> 'pk',
+			'queue_id'		=> 'string NOT NULL',
+			'created_on'	=> 'timestamp NOT NULL',
+			'sender_id'		=> $userPkType.' REFERENCES '.$schema->quoteTableName($userTable).' ('.$userPk.') ON DELETE CASCADE ON UPDATE CASCADE',
+			'message_id'	=> 'integer',
+			'subscription_id' => 'integer REFERENCES '.$schema->quoteTableName('{{nfy_subscriptions}}').' (id) ON DELETE CASCADE ON UPDATE CASCADE',
+			'status'		=> 'integer NOT NULL',
+			'timeout'		=> 'integer',
+			'reserved_on'	=> 'timestamp',
+			'deleted_on'	=> 'timestamp',
+			'mimetype'		=> 'string NOT NULL DEFAULT \'text/plain\'',
+			'body'			=> 'text',
 		));
 
 		$this->createIndex('{{nfy_messages}}_queue_id_idx', '{{nfy_messages}}', 'queue_id');
@@ -59,9 +59,9 @@ class m130713_201034_notifications_install extends CDbMigration
 
 	public function safeDown()
 	{
+		$this->dropTable('{{nfy_messages}}');
 		$this->dropTable('{{nfy_subscription_categories}}');
 		$this->dropTable('{{nfy_subscriptions}}');
-		$this->dropTable('{{nfy_messages}}');
 	}
 }
 
