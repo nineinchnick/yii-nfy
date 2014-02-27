@@ -98,6 +98,7 @@ class QueueController extends Controller
             // reverse display order to simulate a chat window, where latest message is right above the message form
             $dataProvider->setData(array_reverse($dataProvider->getData()));
         }
+
 		$this->render('messages', array(
 			'queue' => $queue,
 			'queue_name' => $queue_name,
@@ -109,7 +110,7 @@ class QueueController extends Controller
 
 	/**
 	 * Fetches details of a single message, allows to release or delete it or sends a new message.
-	 * @param string $queue_name
+	 * @param string $id queue name
 	 * @param string $subscriber_id
 	 * @param string $message_id
 	 */

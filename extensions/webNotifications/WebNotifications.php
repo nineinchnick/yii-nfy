@@ -60,6 +60,6 @@ class WebNotifications extends CWidget {
 		);
         $options = CJavaScript::encode($options);
 		$script = "notificationsPoller.init({$options});";
-        Yii::app()->clientScript->registerScript(__CLASS__ . '#' . $this->id, $script, CClientScript::POS_END);
+        Yii::app()->clientScript->registerScript(__CLASS__ . '#' . $this->id, $script, CClientScript::POS_READY);
 	}
 }

@@ -107,7 +107,10 @@ class NfyDbSubscription extends CActiveRecord
 	{
         $t = $this->getTableAlias(true);
 		return array(
-			'current' => array('condition' => "$t.is_deleted = 0"),
+			'current' => array(
+                'condition' => "$t.is_deleted = :false",
+                'params' => array(':false'=>0),
+            ),
 		);
 	}
 
@@ -150,7 +153,9 @@ class NfyDbSubscription extends CActiveRecord
 
         $i = 0;
         foreach($categories as $category) {
-			$criteria->addCondition("($r.is_exception = 0 AND :category$i LIKE $r.category) OR ($r.is_exception = 1 AND :category$i NOT LIKE $r.category)");
+			$criteria->addCondition("($r.is_exception = :false AND :category$i LIKE $r.category) OR ($r.is_exception = :true AND :category$i NOT LIKE $r.category)");
+			$criteria->params[':false'] = 0;
+			$criteria->params[':true'] = true;
 			$criteria->params[':category'.$i++] = $category;
         }
         

@@ -97,10 +97,11 @@ interface NfyQueueInterface
 	 */
 	public function subscribe($subscriber_id, $label=null, $categories=null, $exceptions=null);
 	/**
-	 * Unsubscribes a recipient from this queue.
+	 * Unsubscribes a recipient from this queue or remove only selected categories from the subscription.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
+	 * @param array $categories optional, list of categories of messages (e.g. 'system.web') that should be removed from this subscription
 	 */
-	public function unsubscribe($subscriber_id);
+	public function unsubscribe($subscriber_id, $categories=null);
 	/**
 	 * Checkes if recipient is subscribed to this queue.
 	 * @param mixed $subscriber_id the actual format depends on the implementation
