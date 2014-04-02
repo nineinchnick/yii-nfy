@@ -265,10 +265,22 @@ class NfyDbQueue extends NfyQueue
         $trx = NfyDbSubscription::model()->getDbConnection()->getCurrentTransaction() !== null ? null : NfyDbSubscription::model()->getDbConnection()->beginTransaction();
         $subscription = NfyDbSubscription::model()->withQueue($this->id)->withSubscriber($subscriber_id)->matchingCategory($categories)->find();
         if ($subscription !== null) {
-            if ($permanent)
-                $subscription->delete();
-            else
-                $subscription->saveAttributes(array('is_deleted' => true));
+            $canDelete = true;
+            if($categories !== null) {
+                // it may be a case when some (but not all) categories are about to be unsubscribed
+                // if that happens and this subscription ends up with some other categories, only given categories
+                // should be deleted, not the whole subscription
+                NfyDbSubscriptionCategory::model()->deleteByPk(array_map(function($c) { return $c->id; }, $subscription->categories));
+                $canDelete = NfyDbSubscriptionCategory::model()->countByAttributes(array('subscription_id' => $subscription->id)) <= 0;
+            }
+
+            if($canDelete) {
+                if ($permanent) {
+                    $subscription->delete();
+                } else {
+                    $subscription->saveAttributes(array('is_deleted' => true));
+                }
+            }
         }
         if ($trx !== null) {
             $trx->commit();
