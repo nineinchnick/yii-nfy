@@ -109,6 +109,14 @@ class NfySysVQueue extends NfyQueue
 		throw new CException('Not implemented. System V queues does not support peeking. Use the receive() method.');
 	}
 
+    /**
+     * @inheritdoc
+     */
+    public function count($subscriber_id=null, $status=NfyMessage::AVAILABLE)
+    {
+        throw new CException('Not implemented. System V queues does not support count. Use the receive() method.');
+    }
+
 	/**
 	 * @inheritdoc
 	 */

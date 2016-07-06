@@ -103,6 +103,18 @@ class NfyDbQueue extends NfyQueue
     /**
      * @inheritdoc
      */
+    public function count($subscriber_id = null, $status = NfyMessage::AVAILABLE)
+    {
+        return NfyDbMessage::model()
+            ->withQueue($this->id)
+            ->withSubscriber($subscriber_id)
+            ->withStatus($status, $this->timeout)
+            ->count();
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function peek($subscriber_id = null, $limit = -1, $status = NfyMessage::AVAILABLE)
     {
         $pk = NfyDbMessage::model()->tableSchema->primaryKey;
