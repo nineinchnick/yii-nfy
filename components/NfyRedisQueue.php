@@ -135,6 +135,14 @@ class NfyRedisQueue extends NfyQueue
 		return $messages;
 	}
 
+    /**
+     * @inheritdoc
+     */
+    public function count($subscriber_id = null, $status = NfyMessage::AVAILABLE)
+    {
+        return count($this->peek($subscriber_id, -1, $status));
+    }
+
 	/**
 	 * @inheritdoc
 	 */

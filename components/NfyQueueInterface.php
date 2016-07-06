@@ -114,4 +114,12 @@ interface NfyQueueInterface
 	 * @return array of NfySubscription
 	 */
 	public function getSubscriptions($subscriber_id=null);
+
+    /**
+     * Counts messages from the queue
+     * @param mixed $subscriber_id the actual format depends on the implementation
+     * @param integer|array $status allows peeking at reserved or removed messages (not yet permanently)
+     * @return array of NfyMessage objects
+     */
+    public function count($subscriber_id = null, $status = NfyMessage::AVAILABLE);
 }
